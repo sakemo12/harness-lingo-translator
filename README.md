@@ -4,22 +4,21 @@
 
 ###### 本仓库由上一仓库 [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate) 改造而来；原版权归 PerryLink，当前仓库为 [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator)。1.14.0 起包名/插件 ID 从 `dsh-translate` 改为 `harness-lingo-translator`。
 
-[English](README.en.md) · [简体中文](README.md)
 
 ## 功能总览
 
-- **前端显示，不污染上下文**：只改渲染层，不写会话日志、不改工作区、不修改 DSH 配置；原文只留在内存，译文写入本地缓存，关闭翻译开关即恢复。
+- **前端显示，不污染上下文**：只改渲染层，不写会话日志、不改工作区；译文写入内存并同步至本地缓存，关闭翻译开关即恢复。
+- **两种后端**：自定义 OpenAI 兼容服务，接入本地部署小型翻译模型服务；也可选当前会话最近一次请求的模型接口（可能较慢并产生费用）。
+- **内容保真**：代码、路径、URL、标识符等遮成 `⟦n⟧`；翻译完成后将原文覆盖回原位，内容保真。
 - **悬停对照**：静止悬停显示原文，移开恢复；语块高度按原文/译文较大者固定，不会出现排版跳动。
-- **两种后端**：自定义 OpenAI 兼容服务，接入本地部署小型翻译模型服务；也可选当前会话最近一次请求的模型接口（可能较慢并产生费用，不发送对话上下文）。
-- **内容保真**：代码、路径、命令、URL、标识符、版本、哈希、数字、产品名遮成 `⟦n⟧`；占位符丢失/改号/新增或空输出时保留原文；行内代码作为占位符，不切断段落。
-- **更多设置**：连接方式、自定义提示词头、悬停时长、并发数、思考合并、缓存清理等。
-- **被动翻译**：开启时已显示的内容不翻；只翻新生成、之后变化或新展开的内容。
+- **更多设置**：连接方式、自定义提示词头、悬停时长、并发数、思考多段落合并翻译、缓存清理等。
+- **被动翻译**：只翻译当前可见内容，新生成自动跟进、未展开思考只翻译第一段用作预览。
 
 ## 快速开始
 
 ### 1. 启动本地翻译服务
 
-推荐 `hy-mt1.5-1.8b`，其他模型请自行调整提示词。点击下面的标题切换部署方式，默认展开 LM Studio 图形化方案。
+推荐 `hy-mt1.5-1.8b`，其他模型请自行调整提示词。
 
 <details open name="deployment">
 <summary><b>图形化：LM Studio（推荐）</b></summary>
@@ -41,24 +40,6 @@ curl http://127.0.0.1:1234/v1/models
 
 </details>
 
-<details name="deployment">
-<summary><b>命令行：llama.cpp</b></summary>
-
-```sh
-llama-server -hf tencent/HY-MT1.5-1.8B-GGUF:Q8_0 \
-  --host 127.0.0.1 --port 8080 -c 4096 --jinja
-```
-
-- 服务地址：`http://127.0.0.1:8080/v1`
-- 模型名：llama.cpp 可填任意值，默认 `hy-mt1.5-1.8b`
-
-确认服务：
-
-```sh
-curl http://127.0.0.1:8080/v1/models
-```
-
-</details>
 
 <details name="deployment">
 <summary><b>命令行：vLLM</b></summary>
@@ -102,17 +83,6 @@ dsh plugin --profile web add /path/to/harness-lingo-translator
 - **翻译缓存**：默认目录、复制路径、清理已删除对话的缓存。
 
 保存后立即生效；API 令牌只写不回显。高级字段直接改 profile 的 `cordis.patch.yml`，完整 schema 以 `index.mjs` 的 `Config` 为准。
-
-## 从上一仓库升级
-
-1.14.0 改了包名/插件 ID。旧 profile 执行：
-
-```sh
-node scripts/migrate-profile.mjs --profile ~/.dsh/profiles/web
-cd ~/.dsh/profiles/web && pnpm install
-```
-
-然后重启 DSH。脚本会更新依赖、`dsh.profile.bundles` 和插件行，保留原 `config`，并复制旧缓存；旧缓存目录和旧 localStorage 键也会作为回退合并读取。
 
 ## 工作方式
 

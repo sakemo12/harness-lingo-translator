@@ -1,27 +1,24 @@
 # Harness Lingo Translator
 
-> **Use an LLM to translate DeepSeek Harness reasoning and execution, showing the result in the frontend without polluting the context — making Vibe Coding easier for non-native English speakers. Supports local translation services (hy-mt1.5-1.8b recommended), translation history cache, hover comparison, custom prompts, and more settings.**
->
-> Refactored from the previous repository [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate); original copyright PerryLink. Current repository: [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator). Renamed from `dsh-translate` to `harness-lingo-translator` in 1.14.0.
+### Use an LLM to translate DeepSeek Harness reasoning and execution, show the translated result in the frontend without polluting the context, make Vibe Coding easier for non-native English speakers, support local translation service sources (hy-mt1.5-1.8b recommended), support translation history cache, hover comparison, custom prompts, and more settings.
 
-[English](README.en.md) · [简体中文](README.md)
+###### This repository is refactored from the previous repository [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate); original copyright PerryLink. Current repository: [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator). The package/plugin ID was renamed from `dsh-translate` to `harness-lingo-translator` in 1.14.0.
+
 
 ## Feature overview
 
-- **Frontend-only display, no context pollution**: changes only the rendered DOM — no session log, no workspace file, no DSH config write. Originals stay in memory; translations go to local caches, and everything returns when translation is switched off.
-- **Reasoning and execution prose**: translates reasoning summaries, tool output and assistant replies; batches the paragraphs of one reasoning block, and waits for streaming content to finish.
-- **Hover comparison**: a stationary hover shows the original and moving away restores the translation; the block height is pinned to the larger of the original/translated heights so the list does not jump.
-- **Two backends**: the local OpenAI-compatible service by default (LM Studio / llama.cpp / vLLM, etc.), or **System model**, which reuses the newest session model route without sending conversation context (it can be slower and may incur provider costs).
-- **Translation cache**: browser `localStorage` plus a host-private per-workspace document at `~/.dsh/cache/harness-lingo-translator/`; entries are reused by config hash, so re-enabling the switch or a React re-render does not request them again.
-- **Content fidelity**: code, paths, commands, URLs, identifiers, versions, hashes, numbers and product names are masked as `⟦n⟧`; a translation that loses, renumbers or invents a placeholder — or is empty — keeps the original. Inline code is one placeholder, so a paragraph is not split.
-- **More settings**: connection mode, prompt header, hover delay, concurrency, reasoning batching, cache cleanup and more.
-- **Passive translation**: content already visible when the switch is enabled stays original; only new, changed or newly revealed content is translated.
+- **Frontend display, no context pollution**: changes only the render layer; no session log, no workspace write. Translations are written into memory and synced to the local cache, and the original returns when translation is switched off.
+- **Two backends**: a custom OpenAI-compatible service for a small translation model deployed locally; alternatively, the model interface used by the newest request in the current session (possibly slower and incurring provider costs).
+- **Content fidelity**: code, paths, URLs, identifiers and other protected spans are masked as `⟦n⟧`; when translation finishes, the translated text is written back into the original text nodes, keeping the rendering faithful.
+- **Hover comparison**: a stationary hover shows the original and moving away restores the translation; the block height is pinned to the larger of the original/translated heights, so the layout does not jump.
+- **More settings**: connection mode, custom prompt header, hover delay, concurrency, multi-paragraph reasoning batching, cache cleanup and more.
+- **Passive translation**: only visible content is eligible; newly generated content is picked up automatically, and a collapsed reasoning block translates just its first paragraph as a preview.
 
 ## Quick start
 
 ### 1. Start a local translation service
 
-`hy-mt1.5-1.8b` is recommended; adjust the prompts for other models. Click the headings below to switch deployment methods; the LM Studio graphical setup is open by default.
+`hy-mt1.5-1.8b` is recommended; adjust the prompts for other models.
 
 <details open name="deployment">
 <summary><b>Graphical: LM Studio (recommended)</b></summary>
@@ -31,7 +28,7 @@
 3. Open **Developer** (called **Local Server** in older versions), select the model at the top and click **Start Server**. The default port is `1234`.
 4. In the DSH settings **Connection** tab:
    - Service address: `http://127.0.0.1:1234/v1`
-   - Model name: the identifier shown by `GET /v1/models`
+   - Model name: the identifier of the loaded model in LM Studio, as returned by `GET /v1/models`
    - API token: fill it if LM Studio requires authentication, otherwise leave it blank
 5. With LM Studio's JIT loading, set concurrency to `1`.
 
@@ -43,24 +40,6 @@ curl http://127.0.0.1:1234/v1/models
 
 </details>
 
-<details name="deployment">
-<summary><b>Command line: llama.cpp</b></summary>
-
-```sh
-llama-server -hf tencent/HY-MT1.5-1.8B-GGUF:Q8_0 \
-  --host 127.0.0.1 --port 8080 -c 4096 --jinja
-```
-
-- Service address: `http://127.0.0.1:8080/v1`
-- Model name: any value for llama.cpp; the default `hy-mt1.5-1.8b` is fine
-
-Check the service:
-
-```sh
-curl http://127.0.0.1:8080/v1/models
-```
-
-</details>
 
 <details name="deployment">
 <summary><b>Command line: vLLM</b></summary>
@@ -105,17 +84,6 @@ You can also install the directory from the Harness plugin manager. Reload the W
 
 Saving applies immediately; the API token is write-only and never echoed back. For advanced fields, edit the profile's `cordis.patch.yml`; the complete schema is the `Config` in `index.mjs`.
 
-## Upgrade from the previous repository
-
-1.14.0 renamed the package and plugin IDs. For an existing profile:
-
-```sh
-node scripts/migrate-profile.mjs --profile ~/.dsh/profiles/web
-cd ~/.dsh/profiles/web && pnpm install
-```
-
-Then restart DSH. The script updates the dependency, `dsh.profile.bundles` and the plugin row, preserves the existing `config`, and copies the old cache; the old cache directory and old localStorage key are also merged as fallbacks.
-
 ## How it works
 
 The browser walks the rendered DOM, masks code, paths, commands, URLs, identifiers, versions, hashes, numbers and product names as `⟦n⟧`, and sends only the prose to the host. The host calls the local service or the system model; the browser verifies placeholders and writes the translation back into the same text nodes. Translations live only in the DOM, `localStorage` and the host-private cache directory; the session log, workspace files and DSH config are never written.
@@ -147,4 +115,4 @@ Structure (short):
 
 ## License
 
-Apache-2.0. Copyright 2026 PerryLink; modifications Copyright 2026 sakemo12. Refactored from [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate); community plugin, not affiliated with DeepSeek. See [LICENSE](LICENSE), [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Apache-2.0. Copyright 2026 PerryLink; modifications Copyright 2026 sakemo12. This project is refactored from [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate); community plugin, not affiliated with DeepSeek. See [LICENSE](LICENSE), [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
