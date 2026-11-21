@@ -1,20 +1,18 @@
 # Harness Lingo Translator
 
-> **使用大语言模型翻译Deepseek Harness思考、执行过程，在不污染上下文的情况下在前端显示翻译结果，便利非英文母语用户Vibe Coding，支持本地翻译服务来源（推荐hy-mt1.5-1.8b），支持翻译历史缓存，支持悬停对照，支持自定义提示词，更多设置选项。**
->
-> 本仓库由上一仓库 [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate) 改造而来；原版权归 PerryLink，当前仓库为 [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator)。1.14.0 起包名/插件 ID 从 `dsh-translate` 改为 `harness-lingo-translator`。
+### 使用大语言模型翻译Deepseek Harness思考、执行过程，在不污染上下文的情况下在前端显示翻译结果，便利非英文母语用户Vibe Coding，支持本地翻译服务来源（推荐hy-mt1.5-1.8b），支持翻译历史缓存，支持悬停对照，支持自定义提示词，更多设置选项。
+
+###### 本仓库由上一仓库 [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate) 改造而来；原版权归 PerryLink，当前仓库为 [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator)。1.14.0 起包名/插件 ID 从 `dsh-translate` 改为 `harness-lingo-translator`。
 
 [English](README.en.md) · [简体中文](README.md)
 
 ## 功能总览
 
 - **前端显示，不污染上下文**：只改渲染层，不写会话日志、不改工作区、不修改 DSH 配置；原文只留在内存，译文写入本地缓存，关闭翻译开关即恢复。
-- **思考与执行过程**：翻译推理摘要、工具输出和助手回复；支持合并同一段思考的多个语块，流式内容完成后再翻。
 - **悬停对照**：静止悬停显示原文，移开恢复；语块高度按原文/译文较大者固定，不会出现排版跳动。
-- **两种后端**：默认接入本地 OpenAI 兼容服务（LM Studio / llama.cpp / vLLM 等）；也可选「系统模型」，复用当前会话最近一次请求的模型接口，不发送对话上下文（可能较慢并产生费用）。
-- **翻译缓存**：浏览器 `localStorage` + 宿主 `~/.dsh/cache/harness-lingo-translator/`；按配置哈希复用，重开开关或重渲染不重复请求。
+- **两种后端**：自定义 OpenAI 兼容服务，接入本地部署小型翻译模型服务；也可选当前会话最近一次请求的模型接口（可能较慢并产生费用，不发送对话上下文）。
 - **内容保真**：代码、路径、命令、URL、标识符、版本、哈希、数字、产品名遮成 `⟦n⟧`；占位符丢失/改号/新增或空输出时保留原文；行内代码作为占位符，不切断段落。
-- **更多设置**：连接方式、翻译提示词头、悬停时长、并发数、思考合并、缓存清理等。
+- **更多设置**：连接方式、自定义提示词头、悬停时长、并发数、思考合并、缓存清理等。
 - **被动翻译**：开启时已显示的内容不翻；只翻新生成、之后变化或新展开的内容。
 
 ## 快速开始
