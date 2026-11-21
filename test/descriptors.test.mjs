@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 PerryLink
+//
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { INVOCATIONS } from '../lib/wire.mjs'

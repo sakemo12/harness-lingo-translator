@@ -1,6 +1,8 @@
 # Contributing to dsh-translate
 
-Thanks for helping. This project is maintained as a normal member of the PerryLink DSH plugin family.
+Thanks for helping. This repository is a derivative of
+[PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate), maintained
+at [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator).
 
 ## Before you open an issue
 
@@ -10,11 +12,17 @@ Thanks for helping. This project is maintained as a normal member of the PerryLi
 
 ## Pull requests
 
-- Keep the display-only contract: no session append, no workspace write, no on-disk translation cache.
+- Keep the display-only contract: no session append, no workspace write, and no
+  config write outside the user's explicit Save on the Plugins page. The only
+  host file write is the per-workspace cache under
+  `~/.dsh/cache/dsh-translate/`; the workspace itself is never written.
 - Keep placeholder verification fail-closed: a translation that loses, renumbers or invents a `⟦n⟧` token must keep the original text.
 - Add or update a test under `test/`; `pnpm test` must pass on Node 22 and 24.
+- Run `pnpm run lint` and `pnpm run verify:self-contained` before opening the PR.
 - Do not add a build step to the client bundle without updating `client/index.js`'s loader shape and the descriptor parity test.
 - Keep both READMEs (Chinese and English) in sync for user-visible behaviour.
+- Keep the copyright header in `LICENSE`/`NOTICE` intact; new third-party
+  material needs an entry in `THIRD_PARTY_NOTICES.md`.
 
 ## Security
 

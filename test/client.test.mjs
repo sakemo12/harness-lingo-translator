@@ -1,9 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 PerryLink
+//
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { loadClient } from './helpers.mjs'
 
 const client = await loadClient()
-const { protectText, restoreText } = client.__test
+const { protectText, restoreText, isChineseText } = client.__test
 
 test('protects commands, paths and file names', () => {
   const source = 'Run `npm test` in /repo/src then read README.md'
@@ -67,4 +70,33 @@ test('honours an extra glossary term', () => {
   const result = protectText('Use Acme Widgets here', ['Acme Widgets'])
   assert.ok(result !== null)
   assert.equal(result.masked, 'Use ⟦0⟧ here')
+})
+
+test('does not mask prose that only looks like a path or identifier', () => {
+  assert.deepEqual(protectText('lost/duplicated/invented words', []).slots, [])
+  assert.deepEqual(protectText('a fail-closed and state-of-the-art design', []).slots, [])
+  assert.deepEqual(protectText('The bundle and a digit are legitimate.', []).slots, [])
+})
+
+test('keeps model names, versions and real paths as single slots', () => {
+  const result = protectText('tencent/HY-MT1.5-1.8B-GGUF v0.2.1-rc.2 1.8B /etc/hosts', [])
+  assert.deepEqual(result.slots, ['HY-MT1.5-1.8B-GGUF', 'v0.2.1-rc.2', '1.8B', '/etc/hosts'])
+  assert.equal(result.masked.replace(/⟦\d+⟧/g, 'X'), 'tencent/X X X X')
+})
+
+
+test('recognises Chinese blocks without swallowing Japanese or Korean', () => {
+  assert.equal(isChineseText('这是中文段落'), true)
+  assert.equal(isChineseText('打开 README.md 文件'), true)
+  assert.equal(isChineseText('Hello world'), false)
+  assert.equal(isChineseText('日本語のテキストです'), false)
+  assert.equal(isChineseText('한국어 텍스트입니다'), false)
+})
+
+test('quoted citations do not make an English block Chinese', () => {
+  assert.equal(isChineseText('The reply was “好的” and then it stopped.'), false)
+  assert.equal(isChineseText('He wrote "中文" once.'), false)
+  assert.equal(isChineseText('“你好”'), false)
+  assert.equal(isChineseText('他说“hello”然后走了。'), true)
+  assert.equal(isChineseText('这是“中文”引用'), true)
 })

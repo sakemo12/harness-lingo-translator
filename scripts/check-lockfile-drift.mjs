@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 PerryLink
+//
 // scripts/check-lockfile-drift.mjs - fail fast when package.json and pnpm-lock.yaml disagree.
 //
 // Why this exists: the 0.1.6-alpha.2 batch shipped two releases whose `package.json`

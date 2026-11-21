@@ -1,0 +1,13 @@
+dsh-translate
+Copyright 2026 PerryLink
+Modifications Copyright 2026 sakemo12
+
+This repository is a derivative of
+https://github.com/PerryLink/dsh-translate, maintained at
+https://github.com/sakemo12/harness-lingo-translator.
+
+This product is licensed under the Apache License, Version 2.0. See LICENSE.
+
+Third-party components and references are listed in THIRD_PARTY_NOTICES.md.
+The model weights of tencent/HY-MT1.5-1.8B-GGUF are not distributed with this
+package; users deploy the model separately.

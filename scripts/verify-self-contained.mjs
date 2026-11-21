@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 PerryLink
+//
 // Rejects dependency specs that leave the repository root (file/link/portal/
 // workspace/git/http paths) so the published package stays installable from
 // the registry or a tarball with no external references.

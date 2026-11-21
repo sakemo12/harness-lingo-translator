@@ -1,5 +1,10 @@
-// Shared test helpers: load the hand-written client bundle in Node.
-import { pathToFileURL } from 'node:url'
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 PerryLink
+//
+// Shared test helpers: load the hand-written client bundle in Node and build
+// OpenAI-compatible fetch doubles for the host engine.
+import React from 'react'
+import { resolveConfig } from '../index.mjs'
 
 let counter = 0
 
@@ -20,31 +25,58 @@ export async function loadClient() {
   url.searchParams.set('t', String(counter) + '-' + String(Date.now()))
   await import(url.href)
   if (spec === undefined) throw new Error('client bundle did not call window.__ModuleLoader__.load')
-  return spec.factory()
+  return spec.factory((name) => {
+    if (name === 'react') return React
+    throw new Error(`client bundle requested an unexpected module: ${name}`)
+  })
 }
 
-/** A block assembler shaped like @deepseek-ai/dsh-llm BlockAssembler. */
-export function fakeAssembler() {
-  let text = ''
+/** A resolved plugin config with test-friendly overrides. */
+export function baseConfig(overrides = {}) {
+  return resolveConfig({
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    model: 'hy-mt1.5-1.8b',
+    targetLang: 'zh',
+    retries: 0,
+    ...overrides,
+  })
+}
+
+/** A config source shaped like `createConfigSource` output. */
+export function configSource(overrides = {}) {
+  return { read: () => baseConfig(overrides) }
+}
+
+/** A fetch Response double that carries a JSON body for `text()` and `json()`. */
+export function jsonResponse(body, status = 200) {
+  const raw = typeof body === 'string' ? body : JSON.stringify(body)
   return {
-    push(chunk) {
-      if (chunk !== null && typeof chunk === 'object' && chunk.type === 'text-delta' && typeof chunk.text === 'string') text += chunk.text
-    },
-    blocks() { return [{ type: 'text', text }] },
+    ok: status >= 200 && status < 300,
+    status,
+    async text() { return raw },
+    async json() { return JSON.parse(raw) },
   }
 }
 
-/** An llm service whose stream answers with one JSON array per call. */
-export function fakeLlm(answers) {
-  let call = 0
-  return {
-    calls: [],
-    async *stream(request) {
-      this.calls.push(request)
-      const answer = answers[Math.min(call, answers.length - 1)]
-      call += 1
-      yield { type: 'text-delta', text: JSON.stringify(answer) }
-      yield { type: 'finish', reason: { kind: 'stop' } }
-    },
+/** A chat-completion response carrying one message. */
+export function completion(content, finishReason = 'stop') {
+  return jsonResponse({ choices: [{ message: { role: 'assistant', content }, finish_reason: finishReason }] })
+}
+
+/**
+ * A fetch double that answers each chat completion through `reply(prompt, body, call)`.
+ * `calls` keeps every parsed request body.
+ */
+export function fakeFetch(reply) {
+  const calls = []
+  const impl = async (url, init) => {
+    const body = JSON.parse(init.body)
+    const prompt = body.messages[0].content
+    calls.push({ url, body, prompt })
+    const answer = await reply(prompt, body, calls.length)
+    if (answer instanceof Error) throw answer
+    return answer
   }
+  impl.calls = calls
+  return impl
 }

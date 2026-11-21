@@ -12,14 +12,14 @@ body:
     id: version
     attributes:
       label: dsh-translate version
-      placeholder: 0.3.1
+      placeholder: 1.13.2
     validations:
       required: true
   - type: input
     id: host
     attributes:
       label: DSH host version
-      placeholder: 0.2.2-rc.1
+      placeholder: 0.2.1-rc.2
     validations:
       required: true
   - type: input
@@ -34,7 +34,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Open a session with a model route
+        1. Start the local OpenAI-compatible translation server
         2. Click 译
         3. ...
     validations:

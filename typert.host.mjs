@@ -1,9 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 PerryLink
+//
 // typert.host.mjs — hand-written Typert HOST manifest (exported as `./typert`;
 // the typert loader registers the invocations when this package mounts).
 //
-// Namespace: translatePage. Methods: status (no parameters) and translate
-// (one masked-segment request). Both are read-only; neither writes a session
-// event, a workspace file or the network beyond the caller's model route.
+// Namespace: translatePage. Methods: status, translate, loadCache, saveCache.
+// Only the cache methods write, and only under the host-private
+// ~/.dsh/cache/dsh-translate/ directory; session logs and workspaces stay
+// untouched.
 
 import { INVOCATIONS } from './lib/wire.mjs'
 

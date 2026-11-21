@@ -1,25 +1,51 @@
 # dsh-translate bundle patch: mount the full-page translator.
 #
 # The browser half owns the DOM walk and the on/off control; this row only
-# starts the host service that resolves the model route and translates masked
-# segments. Every key below is a Config field (Schemastery); invalid values
-# fail the profile load loudly.
+# starts the host service that calls the local OpenAI-compatible HY-MT endpoint
+# and verifies the placeholder contract. Every key below is a Config field
+# (Schemastery); invalid values fail the profile load loudly.
 - insert:
     - id: dsh-translate
       name: dsh-translate
       config:
         enabled: true
+        # Backend: false = the local OpenAI-compatible endpoint below; true =
+        # the newest session provider/model route through the host `llm`
+        # service. The system-model checkbox in the Plugins page writes this.
+        systemModel: false
+        # Local endpoint (llama.cpp / vLLM / LM Studio …), including /v1.
+        baseUrl: http://127.0.0.1:8080/v1
+        apiKey: ''
+        # llama.cpp ignores the id; vLLM needs the served model name.
+        model: hy-mt1.5-1.8b
         # Empty follows the web UI locale; set e.g. zh, ja, de to force one.
         targetLang: ''
-        # Optional explicit route. Both or neither; empty inherits the newest
-        # request/header recorded by a live session.
-        provider: ''
-        model: ''
-        maxSegments: 40
-        maxChars: 6000
-        timeoutMs: 60000
-        # Thinking is off for translation batches: a batch is a mechanical
-        # rewrite, and DeepSeek routes default to thinking at effort `high`.
-        # One of off, low, high, max.
-        reasoningEffort: off
+        # auto | zh | en | custom: auto uses the model card's Chinese template
+        # for Chinese targets and its English template otherwise.
+        promptTemplate: auto
+        # Required when promptTemplate is custom; must contain {source_text}.
+        customTemplate: ''
+        # Instruction header for every translation; {target_language} is
+        # substituted, and an empty value falls back to the built-in template.
+        promptHeader: '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释'
+        # Retention sentence for requests carrying ⟦n⟧: on/off and an optional
+        # custom sentence that replaces the built-in one. Blank uses the built-in.
+        placeholderGuard: true
+        placeholderHint: ''
+        # Stationary-hover preview: show the original text after this delay.
+        hoverRestore: true
+        hoverRestoreMs: 200
+        # Plain entries stay verbatim; "source=target" entries are terminology
+        # pairs (the model card's terminology-intervention template).
         glossary: []
+        # Model-card recommended sampling defaults.
+        temperature: 0.7
+        topP: 0.6
+        topK: 20
+        repetitionPenalty: 1.05
+        maxTokens: 2048
+        concurrency: 2
+        # Batch one reasoning block into numbered requests (off by default).
+        batchReasoning: false
+        timeoutMs: 60000
+        retries: 1

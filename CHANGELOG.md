@@ -1,5 +1,314 @@
 # Changelog
 
+## [1.13.2] - 2026-11-21
+
+### Fixed
+
+- A translated block no longer reflows when the translation wraps differently
+  from the original: its nearest block-level ancestor is pinned with an inline
+  `min-height` equal to the larger of the original and translated rendered
+  heights. The height is content-box aware (`offsetHeight` first, transformed
+  rect only as a fallback), previewing the original on hover keeps the pinned
+  height, and switching translation off restores the page's own inline value.
+  Only height is pinned; width is untouched.
+
+## [1.13.1] - 2026-11-21
+
+### Fixed
+
+- Saving the system model now writes the Host config field `systemModel`. The
+  settings form had been writing `sessionModel`, which the settings service
+  rejects as a non-volatile field, so every save was refused and the note
+  blamed unrelated `baseUrl`/`model`/`concurrency` values. The rejection note
+  now names the real cause (host rejected the write / host is an older version).
+- The translation-cache notes use their registered dictionary keys. A cache
+  write that throws synchronously (for example a Host started before the cache
+  invocations were loaded) no longer escapes the debounce timer or loses its
+  entries: the translations stay queued for the next flush instead of retrying
+  in a 50 ms loop. Restart DSH after updating so the Host half exposes
+  `loadCache` / `saveCache` / `workspace`; the cache file itself was already
+  correct once those invocations are mounted.
+
+## [1.13.0] - 2026-11-21
+
+### Added
+
+- Paragraph-level translation for prose with inline code: `<code>` / `<kbd>` /
+  `<samp>` runs become placeholders, the whole paragraph is sent as one unit,
+  and the code elements stay untouched. This restores context across inline code
+  (e.g. `The host <code>resolveConfig</code> validates …` now translates “host”
+  as 宿主 instead of 主持人). Cached paragraphs reuse the same combined source.
+
+## [1.12.1] - 2026-11-21
+
+### Fixed
+
+- Removed the 30 s global pause (client and host) after repeated whole-batch
+  failures; translation reports the actual error and retries new segments
+  immediately. Per-segment retry caps and backoff remain.
+- Saving the system model no longer requires valid local `baseUrl`/`model`
+  values: local validation is skipped while `systemModel` is true (so the
+  settings checkbox can be saved).
+- Workspace cache files are now actually written: the client session controller
+  exposes no session list, so the old workspace lookup always failed and the
+  cache load/save was skipped. The host `workspace` invocation resolves
+  `sessions.get(id).header.cwd`; cache pruning is host-side too.
+- The original upstream translation service (host `llm` route, JSON batches) is
+  kept and named **系统模型**. The settings checkbox is clickable again (it was
+  wired to a removed handler). It persists `systemModel`, shows the upstream
+  route hint, and hides local-only fields while selected. No provider/model
+  dropdown or add-model entry is included.
+
+## [1.8.0] - 2026-11-21
+
+### Added
+
+- Per-workspace translation cache documents at
+  `~/.dsh/cache/dsh-translate/<sha256(cwd)>.json`. Entries are content-addressed
+  by `configHash + masked source`, include session/message metadata for
+  inspection, are filtered by the current config on load, and are written with a
+  debounced atomic rename and a 5000-entry LRU bound. The host exposes
+  `loadCache`/`saveCache`; `status()` now returns `configHash`. The browser
+  resolves the current workspace from `[data-conversation-session]` and the
+  sessions catalog, loads the file before translating, and saves successful
+  translations without touching the workspace itself.
+
+## [1.7.2] - 2026-11-21
+
+### Fixed
+
+- Expanding a reasoning row (or any React re-render) no longer reverts a
+  translated node to English: when the app writes back the same original text,
+  the stored translation is immediately re-applied without a new request. This
+  fixes both the collapsed summary and the expanded body.
+
+## [1.7.1] - 2026-11-21
+
+### Added
+
+- Turning Auto-translate back on re-applies cached translations immediately, so
+  previously translated text shows its translation again without new requests.
+- Collapsed reasoning rows translate their visible summary (the first paragraph
+  excerpt) in place, truncated to about 160 characters. Such summaries are
+  translated even when they already existed before the switch was turned on;
+  the hidden body still waits for expansion.
+
+## [1.7.0] - 2026-11-21
+
+### Changed
+
+- The default placeholder-retention sentence is now: “原文中的⟦0⟧、⟦1⟧、⟦2⟧
+  这类占位符必须原样保留，你可以把占位符当做未知内容（一般是专有名词、数值、
+  代码块）插入翻译好的句子，但不要把括号里的编号当做数字翻译进内容里”.
+- The default hover delay is 200 ms (was 1500 ms).
+- “Additional prompt header” is now **Translation prompt header**: it is the
+  instruction line and replaces the built-in instruction, defaulting to
+  “将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释”; it supports
+  `{target_language}`/`{target_lang}` and is ignored for non-Chinese targets
+  while the default is unchanged.
+- The guard setting is renamed **基于文字遮罩的关键词保留** with the new
+  explanation; its custom sentence field is “自定义关键词保留提示词” and only
+  appears when the box is checked.
+- The component settings form is grouped into 连接 / 翻译 / 悬停, has larger
+  section titles (15px) and labels (14px), and the API token moved directly
+  under the model name. The hover delay input only appears while enabled.
+
+## [1.6.2] - 2026-11-20
+
+### Fixed
+
+- The hover preview scope is now the nearest block ancestor (paragraph, list
+  item, ...) of the hovered element, so resting on a leading icon previews the
+  text beside it. The scope is used only when every translated node inside
+  shares one direct parent, so a neighbouring paragraph is never restored; with
+  several text parents only the hovered element's own text is previewed.
+
+## [1.6.1] - 2026-11-20
+
+### Fixed
+
+- Hover restore now accepts `hoverRestoreMs: 0`, which shows the original as
+  soon as the pointer is over a translated block.
+- Moving inside the previewed block keeps the original text; the translation
+  returns only after leaving the block (or scrolling / leaving the page).
+- Preview scope is the direct parent of the translated text nodes, so moving
+  onto a container (for example `<body>`) no longer previews unrelated text.
+
+## [1.6.0] - 2026-11-20
+
+### Added
+
+- **Hover restore**: while Auto-translate is on, resting the pointer on a
+  translated block for `hoverRestoreMs` (default 1500 ms) shows that block's
+  original text; any pointer movement, scroll or leave restores the translation.
+  Both `hoverRestore` (on/off) and `hoverRestoreMs` (200–60000) are editable in
+  the row settings form and apply after toggling Auto-translate off and on.
+
+## [1.5.1] - 2026-11-20
+
+### Fixed
+
+- Quoted citations no longer make an English block look Chinese: `“…”`, `「…」`,
+  `『…』`, `‘…’` and `"…"` are ignored for the two-CJK test, so an English
+  sentence quoting a Chinese phrase is translated. A Chinese sentence quoting
+  English still counts as Chinese and is skipped.
+
+## [1.5.0] - 2026-11-20
+
+### Changed
+
+- The browser now skips text blocks that are already Chinese (two consecutive
+  CJK ideographs; kana and Hangul are not treated as Chinese), regardless of the
+  target language.
+- Messages sent by the user (`data-chat-flow-kind="user"` / `"steering"`) are
+  never translated.
+
+## [1.4.0] - 2026-11-20
+
+### Added
+
+- The placeholder-retention sentence is configurable in the row settings form:
+  - `placeholderGuard` (default `true`) switches it off for requests that carry
+    `⟦n⟧`;
+  - `placeholderHint` (default empty) replaces the built-in sentence and is
+    inlined into the instruction, so the model does not translate it as content.
+
+## [1.3.0] - 2026-11-20
+
+### Added
+
+- **Additional prompt header** (`promptHeader`, empty by default, editable in
+  the row settings form). A non-empty value is prepended to every translation
+  prompt (per-segment and batched) with one blank line, for tone or style
+  instructions; it is applied on the next translation, without a restart.
+
+## [1.2.1] - 2026-11-20
+
+### Fixed
+
+- Over-masking of ordinary prose:
+  - product terms are now matched with word boundaries, so `bun` no longer
+    matches inside `bundle` and `git` no longer matches inside `digit` or
+    `legitimate`;
+  - a hyphenated word is an identifier only when it carries a digit
+    (`gpt-4o`, `x86-64`) or the `dsh-` prefix, so `fail-closed` and
+    `state-of-the-art` are translated;
+  - a slash sequence is a path only at a path boundary, so
+    `lost/duplicated/invented` is no longer masked;
+  - `HY-MT1.5-1.8B-GGUF` is one placeholder, and versions with a letter suffix
+    (`1.8B`) no longer split into `1.8` + `B`.
+- Measured over 60 historical reasoning paragraphs against the reference
+  deployment: failures dropped from 17 to 14, and every remaining mask is a
+  genuine product/version/identifier/number token (the remaining failures are
+  segments with 4–11 placeholders, where the 1.8B model drops one).
+
+## [1.2.0] - 2026-11-20
+
+### Added
+
+- **Batch reasoning requests** (`batchReasoning`, off by default, editable in the
+  row settings form). The browser groups the paragraphs of one reasoning block
+  (`[data-variant="think"]`) and the host translates up to 8 of them in one
+  numbered-lines request, instead of one request per paragraph. The answer is
+  split by numbering and verified per segment; an unusable answer falls back to
+  per-segment requests. Measured against the reference deployment: 6 segments in
+  1 request, no failures.
+
+## [1.1.2] - 2026-11-20
+
+### Fixed
+
+- Command lines and terminal output were translated because the app renders
+  them as spans inside `[data-terminal]`, not as `<pre>`/`<code>`. The browser
+  half now skips the app's semantic code surfaces: `[data-terminal]`,
+  `[data-command-text]`, `[data-read]`, `[data-diff]`, `[data-json]` and
+  `[data-code]`. Tool descriptions (the task name shown on the tool card) stay
+  prose and are translated as before.
+
+## [1.1.1] - 2026-11-20
+
+### Fixed
+
+- **Request storm / runaway retries.** A segment that failed translation was
+  requested again on every DOM mutation, and scans could overlap while a slow
+  batch was in flight, multiplying identical `/chat/completions` requests (a
+  service log showed one sentence requested 28,805 times). Now:
+  - scans are serialized (one at a time, with a single folded follow-up),
+  - segments in flight are deduplicated,
+  - a failing segment gets at most 3 attempts (5 s / 20 s / 60 s) and is then
+    left in its original language until its text changes or the switch is
+    toggled; failures are not cached,
+  - three whole failed batches in a row pause requests for 30 s, in both the
+    browser half and the host service.
+
+### Changed
+
+- `concurrency` defaults to `2` (was `4`); the profile row uses `2`. A
+  single-instance / JIT-loaded model (LM Studio) should use `1`.
+- `concurrency` is now a volatile Config field and is editable in the row's
+  settings form (an integer from 1 to 16).
+
+## [1.1.0] - 2026-11-20
+
+### Changed
+
+- The floating button is now a **passive translation switch** instead of a
+  translate-this-page action. Enabling it does not translate existing content;
+  switching it off restores every translated node.
+- **Per-block completion**: text inside `[data-streaming]` or
+  `[aria-busy="true"]` is skipped and translated once the mark disappears.
+- **Collapsed content is never translated proactively**: hidden elements,
+  `aria-hidden` subtrees and closed `<details>` bodies are skipped; expanding
+  them triggers translation for the revealed text.
+- **Baseline**: text that was already rendered and visible at enable time is
+  left in its original language unless its content later changes (for example a
+  block still streaming at enable time).
+- The DOM observer now also watches `style`, `class`, `open`, `hidden`,
+  `aria-hidden`, `aria-busy`, `data-streaming` and `data-expanded` so expansion
+  and generation completion retrigger a scan.
+- The row configuration form gained a write-only **API token** field.
+  `apiKey` is a volatile `role('secret')` field, so the settings service strips
+  it from every read; leaving the input blank keeps the current token.
+
+## [1.0.0] - 2026-11-19
+
+### Changed (breaking)
+
+- The translation backend is now a **local OpenAI-compatible endpoint**
+  (`baseUrl`) serving `tencent/HY-MT1.5-1.8B-GGUF`. The session model route,
+  `provider`/`model` route config, `reasoningEffort`, the `sessions`/`llm`
+  injection and the `BlockAssembler` stream handling are removed.
+- Prompts are the official model-card templates (ZH⇄XX, XX⇄XX, terminology
+  intervention) instead of the JSON-array batch prompt. Each masked segment is
+  one `/chat/completions` request, bounded by `concurrency`.
+- New settings: `baseUrl`, `apiKey`, `model`, `promptTemplate`,
+  `customTemplate`, glossary pairs (`source=target`), `temperature`, `topP`,
+  `topK`, `repetitionPenalty`, `maxTokens`, `concurrency`, `timeoutMs`,
+  `retries`. `maxSegments` / `maxChars` are gone.
+- `status()` / `translate()` results carry `baseUrl`, `model` and `glossary`
+  instead of `provider`.
+- A strict OpenAI server rejecting `top_k` / `repetition_penalty` is retried
+  once without the extensions; truncated output (`finish_reason: length`) keeps
+  the original segment.
+- HTTP goes through `lib/transport.mjs` (`node:http`) instead of global `fetch`,
+  so services on WHATWG bad ports such as 123 work (measured against a LAN
+  deployment; `fetch` failed with `bad port`).
+- Masked segments get a placeholder-retention clause; plain segments keep the
+  pristine model-card template because the clause leaks into their answer.
+  Measured on the reference deployment: bare `⟦0⟧` was rewritten to `《0》`
+  without the clause; 30/30 segments preserved it with the clause.
+- Plugin-manager metadata: `locale/en.json`, `locale/zh.json` and the `./icon`
+  export.
+- A configuration page for the row on the Plugins page
+  (`plugins.row.config`, key `dsh-translate#dsh-translate`) with **Service
+  address** and **Model name**. `baseUrl` and `model` are volatile Config fields,
+  so a save applies live through the settings service without a restart.
+
+### Removed
+
+- `@deepseek-ai/dsh-llm` and `@deepseek-ai/dsh-session` usage, `test/route.test.mjs`,
+  and the Spanish / Portuguese / Hindi READMEs (they documented the old backend).
+
 ## [0.3.5] - 2026-11-09
 
 ### Changed
@@ -55,3 +364,57 @@
 
 - Render-layer translation can flicker when React re-renders a node; streaming text is translated after a 350 ms quiet period.
 - Images, Canvas and PDF previews are not OCR'd; hidden elements are translated when they become visible.
+
+## Historical: abandoned 2.x experiment
+
+The following entries describe a 2.x branch that was rolled back before the
+current 1.x line. They are kept for reference and are not part of the current
+release history.
+
+## [2.2.0] - 2026-11-21
+
+### Removed
+
+- Rolled back the system-model backend and its settings (provider/model route,
+  model dropdown, add-model link, `sessionModel`/`systemProvider`/`systemModel`
+  config, `routes` invocation). The **System model** checkbox remains as a
+  placeholder: checking it shows one explanation sentence; translation always
+  uses the custom/local service. The cache tab and prune action are unchanged.
+
+## [2.1.1] - 2026-11-21
+
+### Fixed
+
+- The system-model dropdown now reads the reachable DSH sources instead of only
+  live session headers: host `llm.listProviders()` + `listModels(provider)` and
+  the `settings.describe()` document are merged with session `request/header`
+  routes. A loading hint is shown while the catalog is read; provider catalog
+  failures are ignored so session routes remain available.
+
+## [2.1.0] - 2026-11-21
+
+### Changed
+
+- The plugin settings page is now four top tabs (连接 / 翻译 / 悬停 / 翻译缓存);
+  only the selected tab's fields are shown.
+- Connection uses two mutually exclusive checkboxes: **自定义服务** (local
+  endpoint) and **系统模型** (DSH user-settings models). System model adds a
+  route dropdown fed by live-session `request/header` routes, an “添加模型…”
+  link to DSH Settings → Models, and “刷新模型列表”.
+- New **翻译缓存** tab: shows `~/.dsh/cache/dsh-translate/`, copies the path, and
+  prunes entries whose session id is no longer in the DSH session list.
+- All settings strings were re-checked for zh/en parity; local-only fields
+  (concurrency, prompt header, guard) are hidden while the system model is
+  selected.
+
+## [2.0.0] - 2026-11-21
+
+### Added
+
+- **Session-model backend** (the original upstream integration): the Connection
+  settings section now has a “Use the session model (original integration)”
+  checkbox. When checked, the host resolves the newest `request/header`
+  provider/model from the live sessions and calls `llm.stream` with a JSON array
+  of masked segments. No conversation context and no model-side cache hints are
+  sent; the local address/model/token are disabled. When unchecked the local
+  HY-MT backend is unchanged.

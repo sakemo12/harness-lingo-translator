@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Local Translation",
+    "description": "Translate the whole Web UI into your language with a local OpenAI-compatible HY-MT model, keeping code, paths, commands and product names verbatim."
+  }
+}
