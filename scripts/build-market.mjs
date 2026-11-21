@@ -324,8 +324,9 @@ function alexPullRequest() {
   return [
     `# Add ${pluginName} to UI & user experience`,
     '',
-    'One entry added to `catalog/plugins.json`, then `python scripts/generate_readmes.py` regenerated the',
-    'Chinese mirror, so the README tables are not edited by hand.',
+    'One entry added to `catalog/plugins.json`; the Chinese mirror regenerated with',
+    '`python scripts/generate_readmes.py`; and the matching bullet added by hand to the English catalog in',
+    '`README.md`, which this list maintains manually.',
     '',
     '```json',
     alexCatalogEntry().trim(),
