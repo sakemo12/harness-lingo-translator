@@ -1,48 +1,85 @@
 # Harness Lingo Translator
 
-> Use an LLM to translate DeepSeek Harness reasoning and execution, showing the result in the frontend without polluting the context — making Vibe Coding easier for non-native English speakers. Supports local translation services (hy-mt1.5-1.8b recommended), translation history cache, hover comparison, custom prompts, and more settings.
-
+> **Use an LLM to translate DeepSeek Harness reasoning and execution, showing the result in the frontend without polluting the context — making Vibe Coding easier for non-native English speakers. Supports local translation services (hy-mt1.5-1.8b recommended), translation history cache, hover comparison, custom prompts, and more settings.**
+>
 > Refactored from the previous repository [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate); original copyright PerryLink. Current repository: [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator). Renamed from `dsh-translate` to `harness-lingo-translator` in 1.14.0.
 
 [English](README.en.md) · [简体中文](README.md)
 
-## New features
+## Feature overview
 
-- **Frontend-only display, no context pollution**: changes only the rendered DOM — no session log, no workspace file, no DSH config write. Originals stay in memory and return when translation is switched off.
-- **Two backends**: the local OpenAI-compatible service by default, or **System model**, which reuses the newest `request/header` provider/model from the current session without sending conversation context.
-- **Reasoning and execution prose**: translates reasoning summaries, tool output and assistant replies; `batchReasoning` merges paragraphs of one reasoning block, and streaming blocks wait until they finish.
-- **Translation history cache**: browser `localStorage` (600 entries) plus a host-private per-workspace document at `~/.dsh/cache/harness-lingo-translator/<sha256(workspace)>.json` (5000-entry LRU, filtered by config hash); re-enabling the switch or a React re-render reuses it instantly.
+- **Frontend-only display, no context pollution**: changes only the rendered DOM — no session log, no workspace file, no DSH config write. Originals stay in memory; translations go to local caches, and everything returns when translation is switched off.
+- **Reasoning and execution prose**: translates reasoning summaries, tool output and assistant replies; batches the paragraphs of one reasoning block, and waits for streaming content to finish.
 - **Hover comparison**: a stationary hover shows the original and moving away restores the translation; the block height is pinned to the larger of the original/translated heights so the list does not jump.
-- **Custom prompts**: prompt header, templates (`auto` / `zh` / `en` / `custom`), terminology glossary, and the placeholder-retention switch with a custom sentence.
+- **Two backends**: the local OpenAI-compatible service by default (LM Studio / llama.cpp / vLLM, etc.), or **System model**, which reuses the newest session model route without sending conversation context (it can be slower and may incur provider costs).
+- **Translation cache**: browser `localStorage` plus a host-private per-workspace document at `~/.dsh/cache/harness-lingo-translator/`; entries are reused by config hash, so re-enabling the switch or a React re-render does not request them again.
 - **Content fidelity**: code, paths, commands, URLs, identifiers, versions, hashes, numbers and product names are masked as `⟦n⟧`; a translation that loses, renumbers or invents a placeholder — or is empty — keeps the original. Inline code is one placeholder, so a paragraph is not split.
-- **More settings**: four tabs — Connection, Translation, Hover, Translation cache — for concurrency, batching, prompts, cache cleanup and more.
+- **More settings**: connection mode, prompt header, hover delay, concurrency, reasoning batching, cache cleanup and more.
 - **Passive translation**: content already visible when the switch is enabled stays original; only new, changed or newly revealed content is translated.
-- **Migration compatibility**: existing `dsh-translate` settings are preserved; the old cache directory and localStorage key are merged as fallbacks.
 
 ## Quick start
 
 ### 1. Start a local translation service
 
-`hy-mt1.5-1.8b` is recommended. With llama.cpp:
+`hy-mt1.5-1.8b` is recommended; adjust the prompts for other models. Click the headings below to switch deployment methods; the LM Studio graphical setup is open by default.
+
+<details open name="deployment">
+<summary><b>Graphical: LM Studio (recommended)</b></summary>
+
+1. Download and install [LM Studio](https://lmstudio.ai/).
+2. In **Discover**, search for and download `tencent/HY-MT1.5-1.8B-GGUF` (Q8_0; choose Q4_K_M if VRAM is limited). If it is not in the search results, download the GGUF from Hugging Face and import it.
+3. Open **Developer** (called **Local Server** in older versions), select the model at the top and click **Start Server**. The default port is `1234`.
+4. In the DSH settings **Connection** tab:
+   - Service address: `http://127.0.0.1:1234/v1`
+   - Model name: the identifier shown by `GET /v1/models`
+   - API token: fill it if LM Studio requires authentication, otherwise leave it blank
+5. With LM Studio's JIT loading, set concurrency to `1`.
+
+Check the service:
+
+```sh
+curl http://127.0.0.1:1234/v1/models
+```
+
+</details>
+
+<details name="deployment">
+<summary><b>Command line: llama.cpp</b></summary>
 
 ```sh
 llama-server -hf tencent/HY-MT1.5-1.8B-GGUF:Q8_0 \
   --host 127.0.0.1 --port 8080 -c 4096 --jinja
 ```
 
-With vLLM:
-
-```sh
-vllm serve tencent/HY-MT1.5-1.8B \
-  --served-model-name hy-mt1.5-1.8b --port 8000
-# baseUrl: http://127.0.0.1:8000/v1, model: hy-mt1.5-1.8b
-```
+- Service address: `http://127.0.0.1:8080/v1`
+- Model name: any value for llama.cpp; the default `hy-mt1.5-1.8b` is fine
 
 Check the service:
 
 ```sh
 curl http://127.0.0.1:8080/v1/models
 ```
+
+</details>
+
+<details name="deployment">
+<summary><b>Command line: vLLM</b></summary>
+
+```sh
+vllm serve tencent/HY-MT1.5-1.8B \
+  --served-model-name hy-mt1.5-1.8b --port 8000
+```
+
+- Service address: `http://127.0.0.1:8000/v1`
+- Model name: `hy-mt1.5-1.8b` (must match `--served-model-name`)
+
+Check the service:
+
+```sh
+curl http://127.0.0.1:8000/v1/models
+```
+
+</details>
 
 ### 2. Install the plugin
 
@@ -53,6 +90,9 @@ dsh plugin --profile web add /path/to/harness-lingo-translator
 ```
 
 You can also install the directory from the Harness plugin manager. Reload the Web GUI: an **Auto-translate: off** button appears at the bottom-right.
+
+> [!IMPORTANT]
+> Restart DSH after installing or upgrading; the host half must load before it writes the local translation cache.
 
 ### 3. Configure
 
@@ -82,11 +122,8 @@ The browser walks the rendered DOM, masks code, paths, commands, URLs, identifie
 
 ## Known limits
 
-- Translation happens in the render layer; a React re-render can cause a brief flicker.
-- Streaming blocks are translated after they finish (or after a 350 ms quiet period).
 - Images, Canvas and PDF previews are not OCR'd.
-- Placeholder handling is not 100% stable; a failed segment keeps its original text.
-- System model needs an existing model route in the session; send one message first when there is none.
+- The 1.8B model is not 100% stable with `⟦n⟧`; a failed segment retries at most 3 times and then keeps its original text. For more stability, use a larger translation model, adjust the prompts, or connect another OpenAI-compatible service.
 
 ## Development
 
