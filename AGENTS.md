@@ -126,8 +126,9 @@ uses the host's own model credentials.
   `~/.dsh/cache/harness-lingo-translator/`. `scripts/migrate-profile.mjs` updates
   an existing profile and copies the old cache. Keep the legacy cache directory
   and the old `dsh-translate:cache:v2` localStorage key as read-only fallbacks;
-  the first new write imports the old entries. Do not remove those fallbacks
-  without a major-version migration plan.
+  the host merges the legacy document on every load and seeds the new document
+  from it when the new one is missing. Do not remove those fallbacks without a
+  major-version migration plan.
 - **Re-enable and collapsed previews.** `start()` re-applies cached translations
   (`reapplyCached`) so turning the switch back on restores previously translated
   text without requests. Collapsed reasoning rows bypass the baseline for their

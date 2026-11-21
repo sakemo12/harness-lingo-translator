@@ -21,8 +21,9 @@
   preserving its config, and copies the old cache directory. See the README's
   upgrade section; restart DSH after running it.
 - The cache reads the pre-rename directory and the old localStorage key as
-  fallbacks, and imports the old entries on the first new write, so an upgrade
-  does not lose cached translations.
+  fallbacks, merges the old document on every load, and seeds the new document
+  from it when it does not exist, so an upgrade does not lose cached
+  translations.
 
 ### Changed
 

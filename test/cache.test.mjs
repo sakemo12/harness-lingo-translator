@@ -93,6 +93,15 @@ test('reads the pre-rename cache directory and migrates it on first write', asyn
   assert.equal(Object.keys(document.entries).length, 2)
 })
 
+test('the new cache wins over the pre-rename entry for the same source', async () => {
+  const legacy = await cacheDir()
+  const current = await cacheDir()
+  await new WorkspaceCache({ dir: legacy }).save('/work/one', 'cfg1', [{ source: 'Hello', translation: '你好' }])
+  await new WorkspaceCache({ dir: current }).save('/work/one', 'cfg1', [{ source: 'Hello', translation: '您好' }])
+  const cache = new WorkspaceCache({ dir: current, legacyDir: legacy })
+  assert.deepEqual(await cache.load('/work/one', 'cfg1'), { Hello: '您好' })
+})
+
 test('prunes entries in the pre-rename directory too', async () => {
   const legacy = await cacheDir()
   const current = await cacheDir()

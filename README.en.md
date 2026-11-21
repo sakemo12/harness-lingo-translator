@@ -156,9 +156,10 @@ Then restart DSH. The script:
   `~/.dsh/cache/harness-lingo-translator/`.
 
 The plugin also reads the pre-rename cache directory and the old `localStorage`
-key as a fallback, and imports those entries on the first new write, so cached
-translations are not lost even if the script is skipped. Settings live in the
-profile row, so the migration keeps them.
+key as a fallback; the host merges the old cache document on every load and seeds
+the new document from it when the new one is missing, so cached translations are
+not lost even if the script is skipped. Settings live in the profile row, so the
+migration keeps them.
 
 > Do not enable the old and new plugin rows at the same time. After migrating and
 > restarting DSH, confirm that the Plugins page shows only
@@ -432,7 +433,7 @@ Example: translate to Japanese, pin an internal term, and protect a product name
 
 ```sh
 pnpm install
-pnpm test        # 160 cases: prompt templates, glossary, placeholders, HTTP, concurrency/retries, DOM/heights, cache/migration, settings, descriptor parity
+pnpm test        # 161 cases: prompt templates, glossary, placeholders, HTTP, concurrency/retries, DOM/heights, cache/migration, settings, descriptor parity
 pnpm run lint
 pnpm run verify:self-contained
 ```

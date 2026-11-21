@@ -107,7 +107,7 @@ cd ~/.dsh/profiles/web && pnpm install
 - 把 `cordis.patch.yml` 里对应行的 `id`/`name` 改成新名字，保留整段 `config`；
 - 把 `~/.dsh/cache/dsh-translate/` 复制到 `~/.dsh/cache/harness-lingo-translator/`。
 
-插件本身也会读取旧缓存目录和旧 `localStorage` 键作为兜底，并在第一次写入时把旧条目带到新文件，所以即使不跑脚本，翻译缓存也不会直接失效。设置值保存在 profile 行里，迁移脚本不会丢配置。
+插件本身也会合并读取旧缓存目录和旧 `localStorage` 键；新缓存文件不存在时会以旧文件为种子写入，所以即使不跑脚本，翻译缓存也不会直接失效。设置值保存在 profile 行里，迁移脚本不会丢配置。
 
 > 旧插件行和新插件行不要同时启用；迁移并重启 DSH 后，确认 Plugins 里只剩 `harness-lingo-translator` 一行。
 
@@ -278,7 +278,7 @@ Translate the following segment into {target_language}, without additional expla
 
 ```sh
 pnpm install
-pnpm test        # 160 个用例：提示词模板、词表、占位符、HTTP 协议、并发/重试、DOM/高度、缓存/迁移、设置页、两端 descriptor 一致性
+pnpm test        # 161 个用例：提示词模板、词表、占位符、HTTP 协议、并发/重试、DOM/高度、缓存/迁移、设置页、两端 descriptor 一致性
 pnpm run lint
 pnpm run verify:self-contained
 ```
