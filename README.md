@@ -1,12 +1,12 @@
 # Harness Lingo Translator
 
-> 使用大语言模型翻译Deepseek Harness思考、执行过程，在不污染上下文的情况下在前端显示翻译结果，便利非英文母语用户Vibe Coding，支持本地翻译服务来源（推荐hy-mt1.5-1.8b），支持翻译历史缓存，支持悬停对照，支持自定义提示词，更多设置选项。
+> ##使用大语言模型翻译Deepseek Harness思考、执行过程，在不污染上下文的情况下在前端显示翻译结果，便利非英文母语用户Vibe Coding，支持本地翻译服务来源（推荐hy-mt1.5-1.8b），支持翻译历史缓存，支持悬停对照，支持自定义提示词，更多设置选项。
 
 > 本仓库由上一仓库 [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate) 改造而来；原版权归 PerryLink，当前仓库为 [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator)。1.14.0 起包名/插件 ID 从 `dsh-translate` 改为 `harness-lingo-translator`。
 
 [English](README.en.md) · [简体中文](README.md)
 
-## 新功能
+## 功能总览
 
 - **前端显示，不污染上下文**：只改渲染层，不写会话日志、不改工作区、不修改 DSH 配置；原文留在内存，关闭开关即恢复。
 - **两种后端**：默认调用本地 OpenAI 兼容服务；也可选「系统模型」，用当前会话最近一次请求的 provider/model，不发送对话上下文。
