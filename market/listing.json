@@ -1,0 +1,85 @@
+{
+  "$comment": "Single source of truth for every marketplace listing. Edit here, then run `pnpm run market:build`. Descriptions must stay factual: marketplaces reject copy the code does not back up.",
+  "author": "sakemo12",
+  "repository": "https://github.com/sakemo12/harness-lingo-translator",
+  "github": {
+    "$comment": "Snapshot of the public repo, refreshed by `pnpm run market:verify`. createdAt drives the awesome-dsh-plugin one-day age gate.",
+    "createdAt": "2026-11-21T09:21:30Z",
+    "stars": 1,
+    "topics": []
+  },
+  "category": {
+    "id": "translation",
+    "title": {
+      "en": "Translation",
+      "zh": "翻译"
+    },
+    "byMarket": {
+      "awesome-dsh-plugin": "ui",
+      "awesome-dsh-plugin-alex-yanggg": "ui-user-experience",
+      "dsh-suite": "ui",
+      "dsh-plugin-org": "UI & Experience"
+    }
+  },
+  "labels": {
+    "web": {
+      "en": "Web UI",
+      "zh": "Web 界面"
+    },
+    "local-model": {
+      "en": "Local model",
+      "zh": "本地模型"
+    },
+    "display-only": {
+      "en": "Display only",
+      "zh": "只改显示"
+    }
+  },
+  "keywords": [
+    "translation",
+    "i18n",
+    "hy-mt",
+    "local-model",
+    "web-ui",
+    "display-only"
+  ],
+  "descriptions": {
+    "short": {
+      "en": "Shows translated thinking and replies in the DSH web UI through a local OpenAI-compatible model; code and paths stay verbatim.",
+      "zh": "在 DSH Web 界面显示思考与回复的译文，翻译走本地 OpenAI 兼容模型；代码与路径保持原样。"
+    },
+    "oneLine": {
+      "en": "After installing, DSH's thinking and replies render in your language in the web UI, the original stays one hover away, and session logs, code and workspace files are never modified.",
+      "zh": "安装后 DSH 的思考与回复会以你的语言显示在 Web 界面，悬停即可查看原文，会话记录、代码与工作区文件都不会被改动。"
+    },
+    "long": {
+      "en": "Harness Lingo Translator renders a translated copy of the DeepSeek Harness web GUI. Before a request the browser masks code, paths, commands, URLs, identifiers, version numbers and product names as placeholders, sends only the prose to a local OpenAI-compatible endpoint (tencent/HY-MT1.5-1.8B under LM Studio, llama.cpp or vLLM) or to the session's own model route, then restores the masked text verbatim and keeps the original for any segment whose placeholders did not survive. Results are cached per workspace, a stationary hover shows the original text, and translated rows keep their original height. Session logs, workspace files and DSH configuration are never written. Derived from PerryLink/dsh-translate.",
+      "zh": "Harness Lingo Translator 在 DeepSeek Harness 的 Web 界面上渲染一份译文副本。请求前，浏览器把代码、路径、命令、URL、标识符、版本号与产品名遮成占位符，只把散文发给本地 OpenAI 兼容服务（LM Studio / llama.cpp / vLLM 承载 tencent/HY-MT1.5-1.8B）或当前会话的模型接口；翻译完成后原样还原被遮内容，占位符对不上的段落保留原文。结果按工作区缓存，静止悬停可查看原文，译文行保持原有高度。不写入会话日志、工作区文件与 DSH 配置。由 PerryLink/dsh-translate 改造而来。"
+    },
+    "install": {
+      "npm": "dsh plugin --profile web add harness-lingo-translator",
+      "git": "dsh plugin --profile web add github:sakemo12/harness-lingo-translator",
+      "local": "dsh plugin --profile web add /path/to/harness-lingo-translator"
+    },
+    "compatibility": {
+      "en": "DSH >=0.2.1-0 <0.3.0, Node ^22.19.0 || >=24.0.0, web profile only (the client bundle runs in the browser).",
+      "zh": "DSH >=0.2.1-0 <0.3.0，Node ^22.19.0 || >=24.0.0，仅 Web profile（客户端逻辑运行在浏览器中）。"
+    },
+    "permissions": {
+      "en": "Outbound HTTP(S) only to the OpenAI-compatible endpoint you configure (loopback or LAN by default) or to the host model route; the only file write is the per-workspace cache under ~/.dsh/cache/harness-lingo-translator/.",
+      "zh": "只向你配置的 OpenAI 兼容服务（默认本机或局域网）或宿主模型接口发出 HTTP(S) 请求；唯一的文件写入是 ~/.dsh/cache/harness-lingo-translator/ 下按工作区划分的缓存。"
+    },
+    "limitations": {
+      "en": "Images, canvas and PDF are not OCR'd, and a 1.8B model can still break a placeholder on a long segment; a failing segment is retried at most three times and then left in the original language.",
+      "zh": "图片、Canvas 与 PDF 不做 OCR；1.8B 模型在长段落上仍可能弄坏占位符，失败段落最多重试 3 次，之后保留原文。"
+    },
+    "headline": {
+      "en": "On-screen translation for the DSH web UI",
+      "zh": "DSH Web 界面的屏幕翻译"
+    }
+  },
+  "source": {
+    "$comment": "git = install from a pinned commit; switch to npm after the first `npm publish` and rebuild.",
+    "type": "git"
+  }
+}

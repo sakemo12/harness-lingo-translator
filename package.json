@@ -96,7 +96,10 @@
     "test": "node --test \"test/**/*.test.mjs\"",
     "lint": "node scripts/lint.mjs",
     "check:lockfile": "node scripts/check-lockfile-drift.mjs",
-    "verify:self-contained": "node scripts/verify-self-contained.mjs"
+    "verify:self-contained": "node scripts/verify-self-contained.mjs",
+    "market:build": "node scripts/build-market.mjs",
+    "market:check": "node scripts/build-market.mjs --check",
+    "market:verify": "node scripts/build-market.mjs --check --verify"
   },
   "repository": {
     "type": "git",

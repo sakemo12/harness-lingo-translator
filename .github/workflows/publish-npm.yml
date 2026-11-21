@@ -1,0 +1,60 @@
+name: Publish to npm
+
+# Manual only, and deliberately not wired to a tag. The Release workflow stays
+# GitHub-Release-only so a tag can never publish under a registry name by
+# accident; publishing `harness-lingo-translator` is a separate, reviewable act.
+#
+# Requires an NPM_TOKEN repository secret with publish rights for the package.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag to publish, for example v1.14.0'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Verify the ref is the tag naming this version
+        run: |
+          TAG="$(git describe --tags --exact-match 2>/dev/null || true)"
+          test -n "$TAG" || { echo "ref ${{ inputs.ref }} is not a tag"; exit 1; }
+          VERSION="$(node -p "require('./package.json').version")"
+          test "$TAG" = "v$VERSION" || { echo "tag $TAG != package.json $VERSION"; exit 1; }
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.7.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Gates
+        run: |
+          pnpm test
+          pnpm run lint
+          pnpm run verify:self-contained
+          pnpm run market:check
+
+      - name: Publish
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Next step
+        run: |
+          echo "Published. Set market/listing.json source.type to \"npm\"," \
+               "run pnpm run market:build, and commit the regenerated market/."

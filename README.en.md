@@ -62,13 +62,35 @@ curl http://127.0.0.1:8000/v1/models
 
 ### 2. Install the plugin
 
-This repository is a local directory package:
+From npm (once published — `dsh plugin` installs prebuilt code, no build permission needed):
+
+```sh
+dsh plugin --profile web add harness-lingo-translator
+```
+
+Straight from GitHub (no npm account, and no build permission: the package has no `prepare` script):
+
+```sh
+dsh plugin --profile web add github:sakemo12/harness-lingo-translator
+```
+
+From a local directory (development or offline):
 
 ```sh
 dsh plugin --profile web add /path/to/harness-lingo-translator
 ```
 
 You can also install the directory from the Harness plugin manager. Reload the Web GUI: an **Auto-translate: off** button appears at the bottom-right.
+
+#### Install from a plugin market
+
+Open **Plugins → Discover** (enable the official experimental custom-market bundle first) and add this index source:
+
+```
+https://cdn.jsdelivr.net/gh/sakemo12/harness-lingo-translator@main/market/index.json
+```
+
+Index format, every marketplace channel and the submission artifacts live in [market/README.md](market/README.md).
 
 > [!IMPORTANT]
 > Restart DSH after installing or upgrading; the host half must load before it writes the local translation cache.

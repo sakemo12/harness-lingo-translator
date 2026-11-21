@@ -1,0 +1,91 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Harness Lingo Translator",
+    "zh": "Harness Lingo Translator"
+  },
+  "description": {
+    "en": "Shows translated thinking and replies in the DSH web UI through a local OpenAI-compatible model; code and paths stay verbatim.",
+    "zh": "在 DSH Web 界面显示思考与回复的译文，翻译走本地 OpenAI 兼容模型；代码与路径保持原样。"
+  },
+  "metadata": {
+    "categories": {
+      "translation": {
+        "title": {
+          "en": "Translation",
+          "zh": "翻译"
+        }
+      }
+    },
+    "labels": {
+      "web": {
+        "title": {
+          "en": "Web UI",
+          "zh": "Web 界面"
+        }
+      },
+      "local-model": {
+        "title": {
+          "en": "Local model",
+          "zh": "本地模型"
+        }
+      },
+      "display-only": {
+        "title": {
+          "en": "Display only",
+          "zh": "只改显示"
+        }
+      }
+    },
+    "sortKeys": {}
+  },
+  "plugins": [
+    {
+      "name": "harness-lingo-translator",
+      "title": {
+        "en": "Harness Lingo Translator",
+        "zh": "Harness Lingo Translator"
+      },
+      "description": {
+        "en": "Shows translated thinking and replies in the DSH web UI through a local OpenAI-compatible model; code and paths stay verbatim.",
+        "zh": "在 DSH Web 界面显示思考与回复的译文，翻译走本地 OpenAI 兼容模型；代码与路径保持原样。"
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Imhhcm5lc3MtbGluZ28tdHJhbnNsYXRvciI+PHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIyNCIgZmlsbD0iIzBiMTIyMCIvPjxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjQ0IiBmaWxsPSJub25lIiBzdHJva2U9IiM3ZGQzZmMiIHN0cm9rZS13aWR0aD0iNiIvPjx0ZXh0IHg9IjY0IiB5PSI3OSIgZmlsbD0iI2Y4ZmFmYyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InVpLXNhbnMtc2VyaWYsc3lzdGVtLXVpLCdOb3RvIFNhbnMgQ0pLIFNDJyxzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ2IiBmb250LXdlaWdodD0iNzAwIj7or5E8L3RleHQ+PC9zdmc+Cg==",
+      "author": "sakemo12",
+      "homepage": "https://github.com/sakemo12/harness-lingo-translator#readme",
+      "repository": {
+        "url": "https://github.com/sakemo12/harness-lingo-translator"
+      },
+      "metadata": {
+        "category": "translation",
+        "keywords": [
+          "translation",
+          "i18n",
+          "hy-mt",
+          "local-model",
+          "web-ui",
+          "display-only"
+        ],
+        "labels": [
+          "web",
+          "local-model",
+          "display-only"
+        ]
+      },
+      "versions": [
+        {
+          "version": "1.14.0",
+          "publishTimestamp": 1795257518,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/sakemo12/harness-lingo-translator",
+            "commit": "00f208697027b83d2b8ee6117bfaa8f18db22ff8"
+          },
+          "engines": {
+            "dsh": ">=0.2.1-0 <0.3.0"
+          }
+        }
+      ]
+    }
+  ]
+}

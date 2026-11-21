@@ -3,6 +3,28 @@
 > 1.14.0 renamed the project from `dsh-translate` to
 > `harness-lingo-translator`. Entries before 1.14.0 use the old name.
 
+## [Unreleased]
+
+### Added
+
+- Marketplace distribution under `market/`: a format-1 plugin-market index
+  (`market/index.json`) that DSH's experimental **Discover** tab can add as an
+  index source, plus ready-to-submit artifacts for dsh-plugin.org, dshbase,
+  awesome-dsh-plugin, awesome-DSH-plugin (Alex-Yanggg) and dsh-suite. All copy
+  comes from `market/listing.json` through `scripts/build-market.mjs`
+  (`pnpm run market:build` / `market:check` / `market:verify`); `market:check`
+  also runs in CI.
+- A manual **Publish to npm** workflow (`.github/workflows/publish-npm.yml`).
+  It is not wired to a tag: the Release workflow stays GitHub-Release-only, and
+  publishing `harness-lingo-translator` needs an `NPM_TOKEN` secret and a
+  deliberate Run workflow.
+- README install section now documents the npm, GitHub and local-directory
+  commands (dsh-plugin.org requires an install command in the README).
+
+### Changed
+
+- The repository icon's `aria-label` is the current package name.
+
 ## [1.14.0] - 2026-11-21
 
 ### Breaking

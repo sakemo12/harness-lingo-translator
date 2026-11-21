@@ -62,13 +62,35 @@ curl http://127.0.0.1:8000/v1/models
 
 ### 2. 安装插件
 
-本仓库是本地目录包：
+npm 包（已发布时，`dsh plugin` 会直接装预构建代码，不需要任何构建授权）：
+
+```sh
+dsh plugin --profile web add harness-lingo-translator
+```
+
+直接从 GitHub 安装（无需 npm 账号，也不需要构建授权，因为本仓库没有 `prepare` 脚本）：
+
+```sh
+dsh plugin --profile web add github:sakemo12/harness-lingo-translator
+```
+
+本地目录（开发或离线）：
 
 ```sh
 dsh plugin --profile web add /path/to/harness-lingo-translator
 ```
 
 也可以在 Harness 插件管理里以本地目录安装。重载 Web GUI 后，右下角出现「自动翻译：关」按钮。
+
+#### 从插件市场安装
+
+在 WEB 插件页打开「发现」标签页（需要启用官方的实验性自定义插件市场组合包），添加索引源：
+
+```
+https://cdn.jsdelivr.net/gh/sakemo12/harness-lingo-translator@main/market/index.json
+```
+
+索引格式、各市场渠道与提交材料见 [market/README.md](market/README.md)。
 
 > [!IMPORTANT]
 > 安装或升级后请重启 DSH；宿主半加载后才会写入本地翻译缓存。

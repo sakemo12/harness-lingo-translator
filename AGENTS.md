@@ -186,6 +186,40 @@ uses the host's own model credentials.
   non-volatile field. `apiKey` also carries `role('secret')`; keep both
   markers, and never read the token back into the form.
 
+## Marketplace listing
+
+`market/` holds every distribution artifact; `market/README.md` is the channel
+runbook (which marketplace needs what, and which step still needs a human).
+
+- **One copy source.** `market/listing.json` owns the title, category, labels,
+  keywords and every description length (zh/en). Never edit the generated
+  `market/index.json` or `market/submissions/*`; `pnpm run market:build`
+  regenerates them from it and `pnpm run market:check` (also a CI gate) fails on
+  drift. All copy must stay factual: awesome-dsh-plugin rejects claims the code
+  does not back up and caps `descriptions.short` at 140 characters, which the
+  builder enforces together with the single-line/period/no-marketing-word rules.
+- **The index pins the release commit.** `market/index.json` is a format-1
+  plugin-market index; its `versions[].source` is a `git+https` install target
+  pinned to the commit that carries the released code, so build it *before*
+  committing the regenerated artifacts (the pinned SHA is then the release
+  commit, not the docs commit). A version bump picks the current `HEAD`
+  automatically; `--commit <sha>` overrides it. Switching `listing.json`
+  `source.type` to `npm` after the first publish makes the index use
+  `name@version`.
+- **Static assets are checked, not trusted.** The SVG icon is inlined as a
+  `data:image/svg+xml;base64` URL in the index (the list reject SVG icons, the
+  index accepts an inline one), and the builder mirrors the format-1 rules
+  (https URLs, 40-hex commit, SemVer, declared category/label ids) so CI can
+  validate without DSH installed; the official
+  `@deepseek-ai/dsh-plugin-market-index` validator is used when resolvable.
+- **README is a listing requirement.** dsh-plugin.org requires the README to
+  carry an install command, so `market:check` fails if
+  `market/listing.json` `descriptions.install.git` is missing from the README.
+- **Discovery is the `dsh-plugin` GitHub topic.** dsh-plugin.org, dshbase,
+  dsh-recommend and the aggregators crawl that topic; a listing PR also
+  requires it. `pnpm run market:verify` checks the topic, the 24-hour repo-age
+  gate, the npm name and that the pinned commit is reachable.
+
 ## Checks
 
-`pnpm test && pnpm run lint && pnpm run verify:self-contained && pnpm pack`
+`pnpm test && pnpm run lint && pnpm run verify:self-contained && pnpm run market:check && pnpm pack`
