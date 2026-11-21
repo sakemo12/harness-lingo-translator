@@ -32,10 +32,14 @@ pnpm run market:verify  # 联网核对 topic、仓库年龄、npm 包名、锚�
 ### 1. 加 `dsh-plugin` topic（必须）
 
 ```sh
-gh repo edit sakemo12/harness-lingo-translator --add-topic dsh-plugin
+gh repo edit sakemo12/harness-lingo-translator \
+  --add-topic dsh-plugin --add-topic dsh --add-topic deepseek-harness \
+  --add-topic translation --add-topic i18n
 ```
 
 没有 `gh` 就在仓库首页 About 旁的齿轮里加 Topics：`dsh-plugin`、`dsh`、`deepseek-harness`、`translation`、`i18n`。
+
+只有 `dsh-plugin` 是硬的收录条件，其余四个帮搜索；加完后 `pnpm run market:verify` 应当只剩「仓库年龄」和 npm 两条提示。
 
 ### 2. 发布到 npm（渠道 1 的内市场、渠道 2 的 npm 映射都靠它）
 
