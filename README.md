@@ -49,7 +49,7 @@ dsh plugin --profile web add /path/to/harness-lingo-translator
 ```
 
 也可以在 Harness 插件管理里以本地目录安装。重载 Web GUI 后，右下角出现「自动翻译：关」按钮。
-> [!请重启DSH以确保缓存正确保存在本地]
+[!请重启DSH以确保缓存正确保存在本地]
 
 ### 3. 配置
 
