@@ -40,7 +40,7 @@ function form(overrides = {}) {
 }
 
 test('the settings page is keyed to the bundle row', () => {
-  assert.equal(SETTINGS_SLOT_KEY, 'dsh-translate#dsh-translate')
+  assert.equal(SETTINGS_SLOT_KEY, 'harness-lingo-translator#harness-lingo-translator')
 })
 
 test('the settings fields use the host config names', () => {

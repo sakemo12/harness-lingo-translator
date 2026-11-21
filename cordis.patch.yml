@@ -1,12 +1,12 @@
-# dsh-translate bundle patch: mount the full-page translator.
+# harness-lingo-translator bundle patch: mount the full-page translator.
 #
 # The browser half owns the DOM walk and the on/off control; this row only
 # starts the host service that calls the local OpenAI-compatible HY-MT endpoint
 # and verifies the placeholder contract. Every key below is a Config field
 # (Schemastery); invalid values fail the profile load loudly.
 - insert:
-    - id: dsh-translate
-      name: dsh-translate
+    - id: harness-lingo-translator
+      name: harness-lingo-translator
       config:
         enabled: true
         # Backend: false = the local OpenAI-compatible endpoint below; true =

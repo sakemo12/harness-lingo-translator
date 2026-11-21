@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in dsh-translate does not work as documented
+description: Something in harness-lingo-translator does not work as documented
 labels: [bug]
 body:
   - type: markdown
@@ -11,8 +11,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: dsh-translate version
-      placeholder: 1.13.2
+      label: harness-lingo-translator version
+      placeholder: 1.14.0
     validations:
       required: true
   - type: input

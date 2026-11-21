@@ -1,5 +1,7 @@
-# dsh-translate（本地模型版）
+# Harness Lingo Translator（本地模型版）
 
+> 原名 `dsh-translate`，1.14.0 起改名为 `harness-lingo-translator`；旧 profile 见下方「从 dsh-translate 升级」。
+>
 > 宿主兼容性：DeepSeek Harness `>=0.2.1-0 <0.3.0`（本机在 `0.2.1-rc.2` 上验证）。
 >
 > GitHub：[sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator) · 基于 [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate)（Apache-2.0）
@@ -8,7 +10,7 @@
 
 DeepSeek Harness 的整页翻译插件。浏览器半边遍历当前页面上的文字节点，把需要保留的片段（代码块与行内代码、文件路径、shell 命令、URL、标识符、版本号、哈希、数字、产品名）先遮成 `⟦n⟧` 占位符，再把剩下的散文交给宿主半边；宿主半边调用**本地 OpenAI 兼容接口**上的 Hunyuan 翻译模型（[tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF)），使用模型卡片给出的**官方提示词模板**逐段翻译；浏览器把占位符还原后写回原来的文本节点。原文一直留在内存里，关闭开关就整体还原。
 
-只改显示层：**不写会话日志、不改工作区文件**。译文只存在于 DOM、浏览器缓存，以及宿主私有目录 `~/.dsh/cache/dsh-translate/` 的按工作区缓存文档里。会话记录里永远是模型真正说过的话。
+只改显示层：**不写会话日志、不改工作区文件**。译文只存在于 DOM、浏览器缓存，以及宿主私有目录 `~/.dsh/cache/harness-lingo-translator/` 的按工作区缓存文档里。会话记录里永远是模型真正说过的话。
 
 > 本版本以本地 OpenAI 兼容端点为主；同时保留「系统模型」开关，用当前会话最近一次请求的 provider/model 翻译。没有 provider/model 下拉列表，也不发送会话上下文。
 
@@ -69,26 +71,45 @@ curl http://127.0.0.1:8080/v1/models
 
 ## 安装
 
-本仓库是本地目录包，安装后 profile 里会出现 `dsh-translate` 这一行：
+本仓库是本地目录包，安装后 profile 里会出现 `harness-lingo-translator` 这一行：
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-translate
+dsh plugin --profile web add /path/to/harness-lingo-translator
 ```
 
 或在 Harness 的插件管理里以本地目录安装。装好后重载 Web GUI，页面右下角会出现「自动翻译：关」按钮：点一下开启被动翻译，再点一下关闭并恢复原文。
 
-**改设置**：侧边栏 **Plugins → Installed plugins → dsh-translate → 配置**。页面顶部是四个横向大标题：**连接 / 翻译 / 悬停 / 翻译缓存**，点哪个才在下方显示对应设置；保存后立即生效，不用重启，也不用改 YAML。
+**改设置**：侧边栏 **Plugins → Installed plugins → harness-lingo-translator → 配置**。页面顶部是四个横向大标题：**连接 / 翻译 / 悬停 / 翻译缓存**，点哪个才在下方显示对应设置；保存后立即生效，不用重启，也不用改 YAML。
 
 - **连接**：两个互斥勾选框——**自定义服务**（本地 OpenAI 兼容服务）和 **系统模型**（上游接入方式，使用当前会话的模型路由）。
 - **翻译**：并发数（仅自定义服务）、长思考合并请求；自定义服务下还有翻译提示词头和关键词保留提示词。
 - **悬停**：悬停显示原文和悬停时长。
-- **翻译缓存**：显示默认保存目录 `~/.dsh/cache/dsh-translate/`，可复制路径，可一键清理已删除对话的缓存。
+- **翻译缓存**：显示默认保存目录 `~/.dsh/cache/harness-lingo-translator/`，可复制路径，可一键清理已删除对话的缓存。
 
 - **API 令牌**是只写的 secret 字段：保存后不会回显、也不会出现在任何设置读取结果里；留空表示保持当前令牌不变，输入新值则替换。要彻底清除，把 profile 里的 `apiKey` 删掉或留空（表单的留空代表不修改）。
 - 令牌（以及服务地址、模型名）保存在 profile 的 `cordis.patch.yml` 里，插件只会把它作为 `Authorization: Bearer` 发给你配置的 `baseUrl`。
 
 
 首次开启开关时，插件会请求 `GET {baseUrl}/models` 判断服务是否在线；服务没起来时按钮旁会显示原因（例如 `cannot reach http://127.0.0.1:8080/v1/models …`），页面不会被改动。
+
+## 从 dsh-translate 升级
+
+1.14.0 起包名和插件行 ID 从 `dsh-translate` 改为 `harness-lingo-translator`。旧 profile 执行：
+
+```sh
+node scripts/migrate-profile.mjs --profile ~/.dsh/profiles/web
+cd ~/.dsh/profiles/web && pnpm install
+```
+
+然后重启 DSH。脚本会：
+
+- 把 profile 的依赖和 `dsh.profile.bundles` 改成新名字；
+- 把 `cordis.patch.yml` 里对应行的 `id`/`name` 改成新名字，保留整段 `config`；
+- 把 `~/.dsh/cache/dsh-translate/` 复制到 `~/.dsh/cache/harness-lingo-translator/`。
+
+插件本身也会读取旧缓存目录和旧 `localStorage` 键作为兜底，并在第一次写入时把旧条目带到新文件，所以即使不跑脚本，翻译缓存也不会直接失效。设置值保存在 profile 行里，迁移脚本不会丢配置。
+
+> 旧插件行和新插件行不要同时启用；迁移并重启 DSH 后，确认 Plugins 里只剩 `harness-lingo-translator` 一行。
 
 ## 何时翻译
 
@@ -102,7 +123,7 @@ dsh plugin --profile web add /path/to/dsh-translate
 - **开启时已展开的内容不翻译**：只有开启之后新出现、或之后才展开的内容会触发翻译（缓存命中时立即显示，不再请求模型）。
 - **关闭开关**：已翻译的内容恢复原文。
 - **重新打开**：关闭前翻译过的内容会从本地缓存立即恢复译文，不重新请求模型；没有缓存的内容仍按“开启时已显示的文字不翻”处理。
-- **工作区缓存文档**：成功译文除了写浏览器 `localStorage`，还会由宿主写入 `~/.dsh/cache/dsh-translate/<sha256(工作区路径)>.json`，每个工作区一份，不会污染仓库。键是 `配置哈希 + 遮罩原文` 的内容寻址；配置（模型/提示词/词表/目标语言/合并模式）变了就不命中，工作区或对话内容变了也只会安全失配，不会把译文套到别的文本上。启动时先读该文件并应用其中的译文，再发起新请求；保存是防抖 + 原子写。设置页「翻译缓存」可以查看默认目录，并一键清理已删除对话的缓存（只删除会话 ID 已不在 DSH 会话列表中的条目）。
+- **工作区缓存文档**：成功译文除了写浏览器 `localStorage`，还会由宿主写入 `~/.dsh/cache/harness-lingo-translator/<sha256(工作区路径)>.json`，每个工作区一份，不会污染仓库。键是 `配置哈希 + 遮罩原文` 的内容寻址；配置（模型/提示词/词表/目标语言/合并模式）变了就不命中，工作区或对话内容变了也只会安全失配，不会把译文套到别的文本上。启动时先读该文件并应用其中的译文，再发起新请求；保存是防抖 + 原子写。设置页「翻译缓存」可以查看默认目录，并一键清理已删除对话的缓存（只删除会话 ID 已不在 DSH 会话列表中的条目）。
 - **折叠的思考块**：直接把可见的摘要（展开后第一段的首行/首句）作为翻译对象，显示在该折叠行的原位置，并把显示截断到约 160 字符；即使它在打开开关前已经存在，也会翻译这一行摘要（正文仍等展开后再翻）。
 - **界面重绘不丢译文**：展开思考块等操作会让 React 把文本节点写回原文；检测到写回的是我们记录过的原文时，直接重新贴回已有译文，不重新请求。
 - **悬停看原文**：自动翻译开启时，鼠标在某个已翻译的语块上**静止悬停**达到设定时长（默认 200 毫秒），该语块临时显示原文；时长设为 **0** 时移上去立即显示。预览期间在**该语块内部移动保持原文**，移到语块外、滚动或移出页面才恢复译文。预览范围取最近的块级祖先（段落/列表项等），**连带前面的小图标**；只有块内译文同属一个直接父元素时才预览，所以不会把相邻段落一起还原。设置页可开关并调整毫秒数；保存后重新开关一次「自动翻译」生效。
@@ -219,8 +240,8 @@ Translate the following segment into {target_language}, without additional expla
 例：翻成日文、把内部系统名固定译法交给模型，并把产品名放进保护词表：
 
 ```yaml
-- id: dsh-translate
-  name: dsh-translate
+- id: harness-lingo-translator
+  name: harness-lingo-translator
   config:
     enabled: true
     baseUrl: http://127.0.0.1:8080/v1
@@ -237,9 +258,9 @@ Translate the following segment into {target_language}, without additional expla
 
 - **只翻新出现或新展开的文字**：开关默认关闭；开启后只处理生成完成的新语块和之后展开的折叠内容，页面上已有的文字不会被扫描翻译。
 - **两种后端**：默认只出网到你配置的本地 `baseUrl`；勾选「系统模型」时不访问本地服务，而是通过宿主 `llm` 用当前会话最近一次请求的 provider/model 翻译，发送的是遮罩后的独立 JSON 数组，不带对话上下文，也不使用模型侧缓存。
-- **结果缓存**：同一段原文（同一目标语言）只翻一次，缓存在浏览器 `localStorage`（上限 600 条），同时由宿主写入 `~/.dsh/cache/dsh-translate/<工作区哈希>.json`（上限 5000 条，按配置哈希失效）；清掉站点数据或删除该目录即消失。
+- **结果缓存**：同一段原文（同一目标语言）只翻一次，缓存在浏览器 `localStorage`（上限 600 条），同时由宿主写入 `~/.dsh/cache/harness-lingo-translator/<工作区哈希>.json`（上限 5000 条，按配置哈希失效）；清掉站点数据或删除该目录即消失。
 - **出网内容**：只有被遮掉受保护片段之后的散文会发给本地服务；路径、代码、命令、密钥形态的标识符不会作为可翻译文本发出。
-- **落盘范围**：译文存在于当前页面的 DOM、浏览器 `localStorage`，以及宿主私有目录 `~/.dsh/cache/dsh-translate/<工作区哈希>.json`；不写工作区、会话日志或 DSH 配置。
+- **落盘范围**：译文存在于当前页面的 DOM、浏览器 `localStorage`，以及宿主私有目录 `~/.dsh/cache/harness-lingo-translator/<工作区哈希>.json`；不写工作区、会话日志或 DSH 配置。
 - **凭据**：`apiKey` 只作为 `Authorization: Bearer` 头发给你配置的端点，不会出现在 `status()` 返回值或错误信息里。
 
 ## 已知限制
@@ -257,7 +278,7 @@ Translate the following segment into {target_language}, without additional expla
 
 ```sh
 pnpm install
-pnpm test        # 152 个用例：提示词模板、词表、占位符、HTTP 协议、并发/重试、DOM/高度、缓存、设置页、两端 descriptor 一致性
+pnpm test        # 160 个用例：提示词模板、词表、占位符、HTTP 协议、并发/重试、DOM/高度、缓存/迁移、设置页、两端 descriptor 一致性
 pnpm run lint
 pnpm run verify:self-contained
 ```
@@ -274,6 +295,8 @@ pnpm run verify:self-contained
 - `typert.host.mjs` — 宿主 Typert 清单
 - `client/index.js` — 手写客户端包：DOM 遍历、遮罩、缓存、悬停、语块高度固定、浮动按钮与设置页
 - `locale/*.json` — 插件管理里显示的标题与描述
+- `scripts/migrate-profile.mjs` — 1.14.0 改名迁移：profile 依赖/行 ID 与旧缓存
+- `scripts/lint.mjs` — 无额外依赖的仓库 lint
 - `test/*.test.mjs` — `node --test`（含 jsdom DOM 测试与真实 loopback HTTP 测试）
 
 ## License

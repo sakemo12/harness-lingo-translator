@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a behaviour or a protected-span rule for dsh-translate
+description: Suggest a behaviour or a protected-span rule for harness-lingo-translator
 labels: [enhancement]
 body:
   - type: textarea

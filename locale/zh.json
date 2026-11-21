@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "本地整页翻译",
+    "title": "Harness Lingo Translator（本地整页翻译）",
     "description": "用本机 OpenAI 兼容的 HY-MT 翻译模型把整个 Web 界面翻成目标语言，代码、路径、命令与专名保持原样。"
   }
 }

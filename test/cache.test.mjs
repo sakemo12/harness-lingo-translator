@@ -6,10 +6,10 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { WorkspaceCache } from '../lib/cache.mjs'
+import { WorkspaceCache, defaultCacheDir, legacyCacheDir } from '../lib/cache.mjs'
 
 async function cacheDir() {
-  return mkdtemp(join(tmpdir(), 'dsh-translate-cache-'))
+  return mkdtemp(join(tmpdir(), 'harness-lingo-translator-cache-'))
 }
 
 test('stores content-addressed entries per workspace and config', async () => {
@@ -73,4 +73,32 @@ test('prunes entries whose session no longer exists', async () => {
   const result = await cache.prune(['live'])
   assert.deepEqual(result, { removed: 1, files: 1 })
   assert.deepEqual(await cache.load('/work/one', 'cfg1'), { a: 'A', c: 'C' })
+})
+
+test('uses the renamed cache directory with a pre-rename fallback', () => {
+  assert.match(defaultCacheDir(), /harness-lingo-translator$/u)
+  assert.match(legacyCacheDir(), /dsh-translate$/u)
+})
+
+test('reads the pre-rename cache directory and migrates it on first write', async () => {
+  const legacy = await cacheDir()
+  const current = await cacheDir()
+  const old = new WorkspaceCache({ dir: legacy })
+  await old.save('/work/one', 'cfg1', [{ source: 'Hello', translation: '你好' }])
+  const cache = new WorkspaceCache({ dir: current, legacyDir: legacy })
+  assert.deepEqual(await cache.load('/work/one', 'cfg1'), { Hello: '你好' })
+  await cache.save('/work/one', 'cfg1', [{ source: 'Bye', translation: '再见' }])
+  assert.deepEqual(await cache.load('/work/one', 'cfg1'), { Hello: '你好', Bye: '再见' })
+  const document = JSON.parse(await readFile(cache.pathFor('/work/one'), 'utf8'))
+  assert.equal(Object.keys(document.entries).length, 2)
+})
+
+test('prunes entries in the pre-rename directory too', async () => {
+  const legacy = await cacheDir()
+  const current = await cacheDir()
+  const old = new WorkspaceCache({ dir: legacy })
+  await old.save('/work/one', 'cfg1', [{ source: 'a', translation: 'A', sessionId: 'deleted' }])
+  const cache = new WorkspaceCache({ dir: current, legacyDir: legacy })
+  assert.deepEqual(await cache.prune(['live']), { removed: 1, files: 1 })
+  assert.deepEqual(await old.load('/work/one', 'cfg1'), {})
 })

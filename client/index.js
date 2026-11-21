@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 PerryLink
 //
-// client/index.js — dsh-translate browser half: a page-level translator.
+// client/index.js — harness-lingo-translator browser half: a page-level translator.
 //
 // Hand-written client bundle (no build step), same loader shape as
 // dsh-checkpoint-rewind. It walks the rendered DOM, masks everything that must
@@ -12,14 +12,14 @@
 // original; the originals stay in memory, the session log is never touched.
 //
 // It also contributes the row's configuration page to the Plugins page:
-// `plugins.row.config` keyed by `dsh-translate#dsh-translate`, with the service
+// `plugins.row.config` keyed by `harness-lingo-translator#harness-lingo-translator`, with the service
 // address and model name, saved through the page owner's settings form.
 //
 // Host side: lib/service.mjs. The Remote descriptors below must match
 // lib/wire.mjs exactly; test/descriptors.test.mjs enforces that.
 
 window.__ModuleLoader__.load({
-  id: 'dsh-translate',
+  id: 'harness-lingo-translator',
   factory: function (require) {
     var module = { exports: {} }
     var exports = module.exports
@@ -29,7 +29,7 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
     // Wire contract (keep in sync with lib/wire.mjs).
     // ---------------------------------------------------------------------
-    var PACKAGE = 'dsh-translate'
+    var PACKAGE = 'harness-lingo-translator'
     var SERVICE = 'translatePage'
     var SOURCE_LOCATION = Object.freeze({ file: 'lib/wire.mjs', line: 1, column: 1 })
 
@@ -43,7 +43,7 @@ window.__ModuleLoader__.load({
 
     function assertObject(value, field) {
       if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-        throw new Error('dsh-translate: unexpected ' + field + ' value')
+        throw new Error('harness-lingo-translator: unexpected ' + field + ' value')
       }
       return value
     }
@@ -349,7 +349,8 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
     // Cache: display-only, bounded, never sent anywhere.
     // ---------------------------------------------------------------------
-    var CACHE_KEY = 'dsh-translate:cache:v2'
+    var CACHE_KEY = 'harness-lingo-translator:cache:v2'
+    var LEGACY_CACHE_KEY = 'dsh-translate:cache:v2'
     var CACHE_MAX = 600
 
     function hashText(text) {
@@ -362,6 +363,14 @@ window.__ModuleLoader__.load({
       var store = {}
       try {
         var raw = window.localStorage.getItem(CACHE_KEY)
+        if (!raw) {
+          // One-time upgrade path for a profile created before the rename.
+          var legacy = window.localStorage.getItem(LEGACY_CACHE_KEY)
+          if (legacy) {
+            raw = legacy
+            try { window.localStorage.setItem(CACHE_KEY, legacy) } catch (error) { /* keep memory copy */ }
+          }
+        }
         if (raw) store = JSON.parse(raw)
       } catch (error) { /* storage disabled: memory-only */ }
       return store
@@ -384,7 +393,7 @@ window.__ModuleLoader__.load({
     var SKIP_SELECTOR = [
       'script', 'style', 'noscript', 'template', 'textarea', 'input', 'select', 'option',
       'code', 'pre', 'kbd', 'samp', 'var', 'svg', 'math', 'canvas', 'iframe', 'object', 'audio', 'video',
-      '[data-dsh-translate-ui]', '[contenteditable="true"]', '[translate="no"]', '[data-no-translate]',
+      '[data-harness-lingo-translator-ui]', '[contenteditable="true"]', '[translate="no"]', '[data-no-translate]',
       '[data-terminal]', '[data-command-text]', '[data-read]', '[data-diff]', '[data-json]', '[data-code]',
       // User-authored messages are input, never translated.
       '[data-chat-flow-kind="user"]', '[data-chat-flow-kind="steering"]',
@@ -1558,7 +1567,7 @@ window.__ModuleLoader__.load({
 
     function createUi(t, engine) {
       var host = document.createElement('div')
-      host.setAttribute('data-dsh-translate-ui', '')
+      host.setAttribute('data-harness-lingo-translator-ui', '')
       host.setAttribute('translate', 'no')
       host.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483000;display:flex;gap:6px;align-items:center;font:12px/1.4 system-ui,sans-serif'
       var button = document.createElement('button')
@@ -1596,7 +1605,7 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
     // Settings page: the row's configuration in the Plugins page.
     // ---------------------------------------------------------------------
-    var SETTINGS_SLOT_KEY = 'dsh-translate#dsh-translate'
+    var SETTINGS_SLOT_KEY = 'harness-lingo-translator#harness-lingo-translator'
     var SETTINGS_FIELDS = ['systemModel', 'baseUrl', 'model', 'concurrency', 'batchReasoning', 'promptHeader', 'placeholderGuard', 'placeholderHint', 'hoverRestore', 'hoverRestoreMs']
     var SETTINGS_LABEL_STYLE = { display: 'grid', gap: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--dsw-alias-label-primary)' }
     var SETTINGS_INPUT_STYLE = {
@@ -1908,12 +1917,12 @@ window.__ModuleLoader__.load({
         hoverOn ? h('span', { style: hintStyle }, t('settings.hoverRestoreMsHint')) : null) : null,
       tab === 'cache' ? h('div', { style: sectionStyle },
         h('span', { style: SETTINGS_LABEL_STYLE }, t('settings.cacheDir')),
-        h('span', { style: { fontSize: '13px', fontFamily: 'ui-monospace,SFMono-Regular,Consolas,monospace', color: 'var(--dsw-alias-label-primary)' } }, '~/.dsh/cache/dsh-translate/'),
+        h('span', { style: { fontSize: '13px', fontFamily: 'ui-monospace,SFMono-Regular,Consolas,monospace', color: 'var(--dsw-alias-label-primary)' } }, '~/.dsh/cache/harness-lingo-translator/'),
         h('span', { style: hintStyle }, t('settings.cacheDirHint')),
         h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
           h('button', { type: 'button', style: SETTINGS_BUTTON_STYLE, onClick: function () {
             if (typeof navigator !== 'undefined' && navigator.clipboard) {
-              navigator.clipboard.writeText('~/.dsh/cache/dsh-translate/').then(function () {
+              navigator.clipboard.writeText('~/.dsh/cache/harness-lingo-translator/').then(function () {
                 setNote({ kind: 'ok', text: t('settings.cacheCopied') })
               }).catch(function (error) {
                 setNote({ kind: 'error', text: t('settings.cacheFailed') + (error && error.message ? error.message : String(error)) })
@@ -1940,11 +1949,11 @@ window.__ModuleLoader__.load({
       throw new Error((error.code ? error.code + ': ' : '') + (error.message || 'remote call failed'))
     }
 
-    var name = 'dsh-translate-client'
+    var name = 'harness-lingo-translator-client'
     var inject = ['locale', 'remote', 'slots', 'sessions']
 
     async function apply(ctx) {
-      ctx.effect(function () { return ctx.locale.register(NS, DICTS) }, 'dsh-translate: dictionaries')
+      ctx.effect(function () { return ctx.locale.register(NS, DICTS) }, 'harness-lingo-translator: dictionaries')
       await ctx.remote.$mount({ package: PACKAGE, descriptors: INVOCATIONS })
       ctx.effect(function () {
         return ctx.slots.inject('plugins.row.config', function () {
@@ -1954,7 +1963,7 @@ window.__ModuleLoader__.load({
             locale: NS,
           }, ConfigPanel)
         })
-      }, 'dsh-translate: settings page')
+      }, 'harness-lingo-translator: settings page')
       ctx.inject(['remote.translatePage'], function (scope) {
         var t = scope.locale.bind(NS)
         var api = {
@@ -2020,7 +2029,7 @@ window.__ModuleLoader__.load({
             if (ui !== null) ui.dispose()
             engine.dispose()
           }
-        }, 'dsh-translate: page control')
+        }, 'harness-lingo-translator: page control')
       })
     }
 

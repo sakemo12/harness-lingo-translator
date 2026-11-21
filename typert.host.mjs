@@ -6,14 +6,14 @@
 //
 // Namespace: translatePage. Methods: status, translate, loadCache, saveCache.
 // Only the cache methods write, and only under the host-private
-// ~/.dsh/cache/dsh-translate/ directory; session logs and workspaces stay
+// ~/.dsh/cache/harness-lingo-translator/ directory; session logs and workspaces stay
 // untouched.
 
 import { INVOCATIONS } from './lib/wire.mjs'
 
 /** Host Typert manifest (validated by @deepseek-ai/dsh-typert-loader). */
 export const TYPERT = Object.freeze({
-  package: 'dsh-translate',
+  package: 'harness-lingo-translator',
   face: 'host',
   schemas: Object.freeze([]),
   invocations: INVOCATIONS,

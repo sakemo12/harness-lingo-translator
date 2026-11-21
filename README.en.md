@@ -1,5 +1,8 @@
-# dsh-translate (local-model edition)
+# Harness Lingo Translator (local-model edition)
 
+> Formerly `dsh-translate`; renamed to `harness-lingo-translator` in 1.14.0. See
+> "Upgrade from dsh-translate" below for an existing profile.
+>
 > Host compatibility: DeepSeek Harness `>=0.2.1-0 <0.3.0` (verified on `0.2.1-rc.2`).
 >
 > GitHub: [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator) · based on [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate) (Apache-2.0)
@@ -21,7 +24,7 @@ restores it.
 
 Display-only: **no session log, no workspace file.** Translations live in the
 DOM, `localStorage`, and a host-private per-workspace document under
-`~/.dsh/cache/dsh-translate/`; the transcript always keeps exactly what the
+`~/.dsh/cache/harness-lingo-translator/`; the transcript always keeps exactly what the
 model said.
 
 > This edition is built around a local OpenAI-compatible endpoint. The optional
@@ -108,7 +111,7 @@ so the server defaults do not need to change.
 This repository is a local directory package:
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-translate
+dsh plugin --profile web add /path/to/harness-lingo-translator
 ```
 
 or install the directory from the Harness plugin manager. Reload the Web GUI: an
@@ -116,7 +119,7 @@ or install the directory from the Harness plugin manager. Reload the Web GUI: an
 passive translation on; click again to switch it off and restore the originals.
 
 **Change behavior or credentials:** **Plugins → Installed plugins →
-dsh-translate → Configure** opens four tabs: **Connection** (Custom service vs
+harness-lingo-translator → Configure** opens four tabs: **Connection** (Custom service vs
 System model, service address, model, API token), **Translation** (concurrency,
 batch reasoning, prompt header, placeholder guard), **Hover** (on/off and delay)
 and **Translation cache** (default directory, copy path, prune deleted
@@ -133,6 +136,33 @@ conversations). Saving applies immediately, with no restart and no YAML edit.
 The first time the switch is turned on, the plugin probes `GET {baseUrl}/models`;
 when the service is down the button shows the reason (for example
 `cannot reach http://127.0.0.1:8080/v1/models …`) and the page is left untouched.
+
+## Upgrade from dsh-translate
+
+1.14.0 renames the package and plugin row from `dsh-translate` to
+`harness-lingo-translator`. For an existing profile:
+
+```sh
+node scripts/migrate-profile.mjs --profile ~/.dsh/profiles/web
+cd ~/.dsh/profiles/web && pnpm install
+```
+
+Then restart DSH. The script:
+
+- updates the profile dependency and `dsh.profile.bundles` to the new name;
+- renames the matching row's `id`/`name` in `cordis.patch.yml` while preserving
+  its entire `config` block;
+- copies `~/.dsh/cache/dsh-translate/` to
+  `~/.dsh/cache/harness-lingo-translator/`.
+
+The plugin also reads the pre-rename cache directory and the old `localStorage`
+key as a fallback, and imports those entries on the first new write, so cached
+translations are not lost even if the script is skipped. Settings live in the
+profile row, so the migration keeps them.
+
+> Do not enable the old and new plugin rows at the same time. After migrating and
+> restarting DSH, confirm that the Plugins page shows only
+> `harness-lingo-translator`.
 
 ## When does it translate
 
@@ -162,7 +192,7 @@ The button is a **passive translation switch**, not "translate this page now":
 - **Switching back on** re-applies translations from the local cache without new
   requests; text without a cached translation still follows the baseline rule.
 - **Per-workspace cache document**: successful translations are also written by
-  the host to `~/.dsh/cache/dsh-translate/<sha256(workspace)>.json`, one file per
+  the host to `~/.dsh/cache/harness-lingo-translator/<sha256(workspace)>.json`, one file per
   workspace, never inside the repository. Entries are content-addressed by
   `configHash + masked source`; a different model/prompt/glossary/target/batch
   mode misses, and a changed workspace or conversation can only miss, never map
@@ -337,8 +367,8 @@ retries once without those two extensions.
 Example: translate to Japanese, pin an internal term, and protect a product name:
 
 ```yaml
-- id: dsh-translate
-  name: dsh-translate
+- id: harness-lingo-translator
+  name: harness-lingo-translator
   config:
     enabled: true
     baseUrl: http://127.0.0.1:8080/v1
@@ -364,7 +394,7 @@ Example: translate to Japanese, pin an internal term, and protect a product name
   conversation context and no model-side cache hints.
 - **Cache**: the same source segment (same target language) is translated once
   and cached in `localStorage` (600 entries), and the host writes a per-workspace
-  document at `~/.dsh/cache/dsh-translate/<sha256(workspace)>.json` (5000-entry
+  document at `~/.dsh/cache/harness-lingo-translator/<sha256(workspace)>.json` (5000-entry
   LRU, filtered by config hash); clearing site data or deleting that directory
   removes it.
 - **What leaves the page**: only prose after protected spans were masked; paths,
@@ -402,7 +432,7 @@ Example: translate to Japanese, pin an internal term, and protect a product name
 
 ```sh
 pnpm install
-pnpm test        # 152 cases: prompt templates, glossary, placeholders, HTTP, concurrency/retries, DOM/heights, cache, settings, descriptor parity
+pnpm test        # 160 cases: prompt templates, glossary, placeholders, HTTP, concurrency/retries, DOM/heights, cache/migration, settings, descriptor parity
 pnpm run lint
 pnpm run verify:self-contained
 ```
@@ -418,6 +448,8 @@ pnpm run verify:self-contained
 - `typert.host.mjs` — host Typert manifest
 - `client/index.js` — hand-written client bundle: DOM walk, masking, cache, hover, block-height pinning, floating button and settings page
 - `locale/*.json` — plugin-manager title and description
+- `scripts/migrate-profile.mjs` — 1.14.0 rename migration: profile dependency/row ID and old cache
+- `scripts/lint.mjs` — dependency-free repository lint
 - `test/*.test.mjs` — `node --test` (jsdom DOM tests and a real loopback HTTP test)
 
 ## License

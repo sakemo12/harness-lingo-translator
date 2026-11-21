@@ -1,5 +1,40 @@
 # Changelog
 
+> 1.14.0 renamed the project from `dsh-translate` to
+> `harness-lingo-translator`. Entries before 1.14.0 use the old name.
+
+## [1.14.0] - 2026-11-21
+
+### Breaking
+
+- Renamed the package and plugin row ID from `dsh-translate` to
+  `harness-lingo-translator`. The settings form key is now
+  `harness-lingo-translator#harness-lingo-translator`, the client loader ID and
+  Typert package IDs use the new name, the host cache moved to
+  `~/.dsh/cache/harness-lingo-translator/`, and the browser cache key is now
+  `harness-lingo-translator:cache:v2`.
+
+### Added
+
+- `scripts/migrate-profile.mjs` migrates an existing profile: it updates the
+  dependency and `dsh.profile.bundles`, renames the matching patch row while
+  preserving its config, and copies the old cache directory. See the README's
+  upgrade section; restart DSH after running it.
+- The cache reads the pre-rename directory and the old localStorage key as
+  fallbacks, and imports the old entries on the first new write, so an upgrade
+  does not lose cached translations.
+
+### Changed
+
+- The release workflow now creates a GitHub Release only; it no longer publishes
+  to npm, which avoids attempting a publish under a package name this fork does
+  not own.
+- Metadata, NOTICE, third-party notices and READMEs point at
+  `sakemo12/harness-lingo-translator` while retaining the upstream
+  `PerryLink/dsh-translate` copyright and attribution.
+- Removed the stale 0.3.6 README hero/flow/demo assets; they described the old
+  session-route backend and a 32-test demo.
+
 ## [1.13.2] - 2026-11-21
 
 ### Fixed

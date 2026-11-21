@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 PerryLink
 //
-// index.mjs — `dsh-translate` host half.
+// index.mjs — `harness-lingo-translator` host half.
 //
 // Mounts the `translatePage` Typert service (status + translate + the
 // per-workspace cache). The browser half owns the DOM walk, protection and the
@@ -10,14 +10,14 @@
 // (tencent/HY-MT1.5-1.8B-GGUF in llama.cpp / vLLM and other compatible servers)
 // or, with `systemModel` enabled, the host `llm` route. It never writes a
 // session event or a workspace file; its only file write is the per-workspace
-// cache under ~/.dsh/cache/dsh-translate/.
+// cache under ~/.dsh/cache/harness-lingo-translator/.
 
 import z from '@deepseek-ai/schemastery'
 import { TranslateService } from './lib/service.mjs'
 import { PROMPT_STYLES } from './lib/engine.mjs'
 
 /** Plugin name used by the Loader row and the client bundle. */
-export const name = 'dsh-translate'
+export const name = 'harness-lingo-translator'
 
 /** Prompt styles accepted by `promptTemplate`; `auto` picks the card's template by target language. */
 const PROMPT_TEMPLATE_IDS = Object.freeze([...PROMPT_STYLES])
@@ -92,7 +92,7 @@ export const Config = z.object({
 export function resolveConfig(raw) {
   const value = raw ?? {}
   const fail = (/** @type {string} */ message) => {
-    throw new TypeError(`dsh-translate: ${message}`)
+    throw new TypeError(`harness-lingo-translator: ${message}`)
   }
   const enabled = value.enabled ?? true
   if (typeof enabled !== 'boolean') fail('config.enabled must be a boolean')

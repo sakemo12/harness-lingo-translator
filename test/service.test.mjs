@@ -151,7 +151,7 @@ test('translate() sends one numbered request for a batched thinking block', asyn
 
 
 test('the service exposes the per-workspace cache', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'dsh-translate-service-cache-'))
+  const dir = await mkdtemp(join(tmpdir(), 'harness-lingo-translator-service-cache-'))
   const service = new TranslateService(new Context(), {
     config: { get: () => ({}) },
     cacheOptions: { dir },
@@ -167,7 +167,7 @@ test('the service exposes the per-workspace cache', async () => {
 
 
 test('pruneCache deletes entries for missing sessions', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'dsh-translate-prune-'))
+  const dir = await mkdtemp(join(tmpdir(), 'harness-lingo-translator-prune-'))
   const service = new TranslateService(new Context(), {
     config: { get: () => ({}) },
     cacheOptions: { dir },

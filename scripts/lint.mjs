@@ -50,6 +50,7 @@ for (const file of jsonFiles) {
 }
 
 const packageJson = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+if (packageJson.name !== 'harness-lingo-translator') failures.push('package.json: name must be harness-lingo-translator')
 if (packageJson.license !== 'Apache-2.0') failures.push('package.json: license must be Apache-2.0')
 for (const file of ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md']) {
   try {
@@ -67,7 +68,7 @@ const notice = await readFile(join(root, 'NOTICE'), 'utf8')
 if (!notice.includes('Copyright 2026 PerryLink')) failures.push('NOTICE: copyright line is required')
 
 const client = await readFile(join(root, 'client/index.js'), 'utf8')
-if (!client.includes('window.__ModuleLoader__.load(') || !client.includes("id: 'dsh-translate'")) {
+if (!client.includes('window.__ModuleLoader__.load(') || !client.includes("id: 'harness-lingo-translator'")) {
   failures.push('client/index.js: the hand-written module-loader shape changed')
 }
 

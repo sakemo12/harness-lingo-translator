@@ -1,6 +1,6 @@
-# AGENTS.md — dsh-translate
+# AGENTS.md — harness-lingo-translator
 
-Standalone DeepSeek Harness plugin repository (`dsh-translate`, JS form:
+Standalone DeepSeek Harness plugin repository (`harness-lingo-translator`, JS form:
 plain-JS host + hand-written client bundle). Repo-local decisions live here.
 
 ## Shape
@@ -19,7 +19,7 @@ uses the host's own model credentials.
 - `lib/service.mjs` — `TranslateService extends TypertRemoteService`; `status()`
   probes `/models` or the host route, `translate()` delegates to the engine,
   and the cache/workspace methods own the per-workspace document. The only file
-  write is the cache under `~/.dsh/cache/dsh-translate/`; no session append.
+  write is the cache under `~/.dsh/cache/harness-lingo-translator/`; no session append.
 - `lib/cache.mjs` — per-workspace cache document: atomic rename, config-hash
   filtering and a bounded LRU.
 - `lib/session-backend.mjs` — the system-model path: host `llm.stream` with the
@@ -39,7 +39,7 @@ uses the host's own model credentials.
   DOM walk, masking, cache, flicker handling, the floating **passive switch**
   (baseline of already-visible text; new/completed/revealed text only), and the
   row configuration page registered at `plugins.row.config` under
-  `dsh-translate#dsh-translate`. It holds a hand-copied descriptor list;
+  `harness-lingo-translator#harness-lingo-translator`. It holds a hand-copied descriptor list;
   `test/descriptors.test.mjs` fails on drift.
 - `test/*.test.mjs` — `node --test`; `http.test.mjs` drives a real loopback
   server, the DOM tests use jsdom.
@@ -49,7 +49,7 @@ uses the host's own model credentials.
 - **Display-only.** No `session.append`, no workspace write, and no config write
   from the plugin code. Translations live in the DOM, a bounded `localStorage`
   cache, and the host-private per-workspace document under
-  `~/.dsh/cache/dsh-translate/`. The only configuration write is the user's
+  `~/.dsh/cache/harness-lingo-translator/`. The only configuration write is the user's
   explicit Save on the Plugins page form, which goes through the host settings
   service.
 - **Two backends.** `systemModel: true` uses the host integration: the host
@@ -110,7 +110,7 @@ uses the host's own model credentials.
   stored `displayed` value when the current text equals `originals.get(node)`
   (before the baseline check) — never issue a request for this case.
 - **Per-workspace cache document.** The only host file write is
-  `~/.dsh/cache/dsh-translate/<sha256(workspace)>.json` (never inside the
+  `~/.dsh/cache/harness-lingo-translator/<sha256(workspace)>.json` (never inside the
   workspace). Entries are content-addressed by `configHash + "\0" + masked
   source`; `loadCache` filters by the current `configHash`, so config changes
   miss, and workspace/conversation changes can only miss, never mis-map.
@@ -121,6 +121,13 @@ uses the host's own model credentials.
   invocation (`sessions.get(id).header.cwd`) using `[data-conversation-session]`,
   with the client store only as an optional shortcut. `pruneCache` runs
   host-side over `sessions.list()`; the client cannot supply a catalog.
+- **Rename migration.** 1.14.0 renamed the package/plugin from `dsh-translate`
+  to `harness-lingo-translator` and moved the cache to
+  `~/.dsh/cache/harness-lingo-translator/`. `scripts/migrate-profile.mjs` updates
+  an existing profile and copies the old cache. Keep the legacy cache directory
+  and the old `dsh-translate:cache:v2` localStorage key as read-only fallbacks;
+  the first new write imports the old entries. Do not remove those fallbacks
+  without a major-version migration plan.
 - **Re-enable and collapsed previews.** `start()` re-applies cached translations
   (`reapplyCached`) so turning the switch back on restores previously translated
   text without requests. Collapsed reasoning rows bypass the baseline for their
@@ -167,7 +174,7 @@ uses the host's own model credentials.
   `Translation cache`); only the active tab renders. `Connection` has two
   mutually exclusive checkboxes — `Custom service` shows `baseUrl`/`model`/`apiKey`;
   `System model` (`systemModel: true`) shows the host route hint and hides
-  local-only translation fields. The cache tab shows `~/.dsh/cache/dsh-translate/`
+  local-only translation fields. The cache tab shows `~/.dsh/cache/harness-lingo-translator/`
   and prunes entries whose session id is gone. Defaults must be visible in the
   fields; tab titles are 15px and field labels 14px.
 - **Live settings fields.** `baseUrl`, `model`, `concurrency`, `batchReasoning`, `promptHeader`, `placeholderGuard`, `placeholderHint`, `systemModel`, `hoverRestore`, `hoverRestoreMs` and `apiKey` are

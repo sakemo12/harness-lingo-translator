@@ -20,7 +20,7 @@ issue for a vulnerability.
 - Only prose with protected spans masked leaves the browser. In the default
   backend it goes only to `baseUrl`.
 - The host half writes no session event and no workspace file. Its only file
-  write is the per-workspace cache under `~/.dsh/cache/dsh-translate/`; the
+  write is the per-workspace cache under `~/.dsh/cache/harness-lingo-translator/`; the
   browser half writes only a bounded translation cache in `localStorage`.
 - Placeholder verification is the trust boundary: a translation that loses,
   renumbers or invents a `⟦n⟧` token — or that is empty or truncated — is
