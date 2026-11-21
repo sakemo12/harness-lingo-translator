@@ -1,29 +1,25 @@
 # Harness Lingo Translator
 
-## 使用大语言模型翻译Deepseek Harness思考、执行过程，在不污染上下文的情况下在前端显示翻译结果，便利非英文母语用户Vibe Coding，支持本地翻译服务来源（推荐hy-mt1.5-1.8b），支持翻译历史缓存，支持悬停对照，支持自定义提示词，更多设置选项。
+### 使用大语言模型翻译Deepseek Harness思考、执行过程，在不污染上下文的情况下在前端显示翻译结果，便利非英文母语用户Vibe Coding，支持本地翻译服务来源（推荐hy-mt1.5-1.8b），支持翻译历史缓存，支持悬停对照，支持自定义提示词，更多设置选项。
 
-#### 本仓库由上一仓库 [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate) 改造而来；原版权归 PerryLink，当前仓库为 [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator)。1.14.0 起包名/插件 ID 从 `dsh-translate` 改为 `harness-lingo-translator`。
+###### 本仓库由上一仓库 [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate) 改造而来；原版权归 PerryLink，当前仓库为 [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator)。1.14.0 起包名/插件 ID 从 `dsh-translate` 改为 `harness-lingo-translator`。
 
 [English](README.en.md) · [简体中文](README.md)
 
 ## 功能总览
 
-- **前端显示，不污染上下文**：只改渲染层，不写会话日志、不改工作区、不修改 DSH 配置；原文留在内存，关闭开关即恢复。
-- **两种后端**：默认调用本地 OpenAI 兼容服务；也可选「系统模型」，用当前会话最近一次请求的 provider/model，不发送对话上下文。
-- **思考与执行过程**：翻译推理摘要、工具输出和助手回复；支持 `batchReasoning` 合并同一段思考的多个语块，流式块完成后再翻。
-- **翻译历史缓存**：浏览器 `localStorage`（600 条）+ 宿主按工作区缓存 `~/.dsh/cache/harness-lingo-translator/<sha256(workspace)>.json`（5000 条，按配置哈希失效）；重开开关或 React 重渲染直接复用。
-- **悬停对照**：静止悬停显示原文，移开恢复；语块高度按原文/译文较大者固定，不跳版。
-- **自定义提示词**：提示词头、模板（auto / zh / en / custom）、术语词表、占位符保留开关与自定义句子。
+- **前端显示，不污染上下文**：只改渲染层，不写会话日志、不改工作区、不修改 DSH 配置；原文留在内存与本地.DSH目录缓存，关闭翻译开关即恢复。
+- **悬停对照**：静止悬停显示原文，移开恢复；语块高度逻辑判断后固定，不会出现排版跳动。
+- **两种后端**：自定义 OpenAI 兼容服务，接入本地部署小型翻译模型服务；也可选用当前任务api同一接口（速度较慢，产生费用）。
 - **内容保真**：代码、路径、命令、URL、标识符、版本、哈希、数字、产品名遮成 `⟦n⟧`；占位符丢失/改号/新增或空输出时保留原文；行内代码作为占位符，不切断段落。
-- **更多设置**：连接、翻译、悬停、翻译缓存四个 tab；并发、思考合并、提示词、缓存清理等。
+- **更多设置**：连接方式、翻译自定义提示词头、悬停时长、并发数目、思考合并、缓存清理等。
 - **被动翻译**：开启时已显示的内容不翻；只翻新生成、之后变化或新展开的内容。
-- **迁移兼容**：旧 `dsh-translate` 配置可保留；旧缓存目录与 localStorage 键作为回退，首次写入自动合并。
 
 ## 快速开始
 
 ### 1. 启动本地翻译服务
 
-推荐 `hy-mt1.5-1.8b`。llama.cpp：
+推荐 `hy-mt1.5-1.8b`其他模型请自主优化提示词。llama.cpp：
 
 ```sh
 llama-server -hf tencent/HY-MT1.5-1.8B-GGUF:Q8_0 \
@@ -53,6 +49,7 @@ dsh plugin --profile web add /path/to/harness-lingo-translator
 ```
 
 也可以在 Harness 插件管理里以本地目录安装。重载 Web GUI 后，右下角出现「自动翻译：关」按钮。
+> [!请重启DSH以确保缓存正确保存在本地]
 
 ### 3. 配置
 
@@ -82,11 +79,8 @@ cd ~/.dsh/profiles/web && pnpm install
 
 ## 已知限制
 
-- 翻译在渲染层进行，React 重新渲染时可能有一次极短闪动。
-- 流式块要等生成完成（或 350ms 安静期）后才翻。
 - 图片、Canvas、PDF 不做 OCR。
-- 模型对 `⟦n⟧` 的处理不是 100% 稳定；失败段保留原文。
-- 系统模型需要当前会话已有一次模型路由；没有时先在会话里发一条消息。
+- 1.8b版本模型对 `⟦n⟧` 的处理不是 100% 稳定，三次失败段保留原文，追求更加稳定可升级7b模型或接入其他api。
 
 ## 开发
 
