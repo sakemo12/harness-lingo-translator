@@ -24,6 +24,9 @@
 ### Changed
 
 - The repository icon's `aria-label` is the current package name.
+- Listed and verified on dsh-plugin.org (2026-11-21); the repository now carries
+  the `dsh-plugin` topic set that DSH directories crawl, and both READMEs carry
+  the listing badge. Submission state lives in `market/README.md`.
 
 ## [1.14.0] - 2026-11-21
 

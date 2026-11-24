@@ -5,13 +5,13 @@
 | 渠道 | 状态 |
 | --- | --- |
 | DSH 官方「发现」页索引 | ✅ 已上线（jsDelivr 可访问，官方校验器通过） |
-| dsh-plugin.org（DSH Plugin Hub） | ✅ 已提交收录 issue（topic 已加，等审核/爬取）；进 DSH 内市场还需 npm 包 |
-| dshbase | ⏳ 自动爬取（topic 已加，等下一轮抓取）；npm 包会加快 |
-| awesome-dsh-plugin | 🟡 分支已推、PR 因「仓库满 24 小时」暂缓（2026-11-22 17:21 后开） |
-| awesome-DSH-plugin（Alex-Yanggg） | ✅ PR [#200](https://github.com/Alex-Yanggg/awesome-DSH-plugin/pull/200) 已开 |
-| dsh-suite | ✅ 收录 issue [#83](https://github.com/whyihaveyou/dsh-suite/issues/83) 已开 |
-| npm | ⬜ 名字 `harness-lingo-translator` 未被占用，等发布 |
-| dsh.so / AllDSH / DSH Hub / dshai.org | ⬜ 表单类，复制 [`submissions/dsh-plugin-org.md`](submissions/dsh-plugin-org.md) 改写 |
+| dsh-plugin.org（DSH Plugin Hub） | ✅ **已收录并 Verified**（2026-11-21）：<https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator>；提交 issue [#875](https://github.com/dshplugin/dsh-plugin-hub/issues/875) 已关闭，对方留言「发布到 npm 后回复一声，会自动切到 npm 主通道」 |
+| dsh-suite | 🟡 收录 issue [#83](https://github.com/whyihaveyou/dsh-suite/issues/83) 已开，等维护者 |
+| awesome-dsh-plugin | 🟡 PR [#18602](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18602) 已开（1 文件），CI 排队中 |
+| awesome-DSH-plugin（Alex-Yanggg） | 🟡 PR [#200](https://github.com/Alex-Yanggg/awesome-DSH-plugin/pull/200) 已开（catalog + 中文镜像 + 英文目录），等维护者 |
+| dshbase | ⏳ 未收录：它按 npm/GitHub 元数据批量抓取，目前页面仍是通用目录（数据快照滞后）；topic 已加，等下一轮 |
+| npm | ⬜ 名字 `harness-lingo-translator` 未被占用，等发布——发布后 Hub 内市场与 dshbase 都会切到 npm 主通道 |
+| dsh.so / AllDSH / DSH Hub / dshai.org | ⬜ 表单类，复制 [`submissions/dsh-plugin-org.md`](submissions/dsh-plugin-org.md) 改写即可 |
 
 ```sh
 pnpm run market:build    # 由 listing.json 重新生成 index.json 与 submissions/*
@@ -51,16 +51,17 @@ npm publish --registry=https://registry.npmjs.org --access public
 > 网络考虑：`git+https://github.com/...` 与 `github:owner/repo` 两种装法都要连 GitHub。国内网络下 npm 包
 > （含镜像 registry）是唯一稳的装法，所以 npm 不只是「让 Hub 一键装」，也是让墙内用户装得上。
 
-### 2. 解锁 awesome-dsh-plugin 的 PR
+### 2. npm 发布后回复 dsh-plugin.org
 
-该列表要求仓库创建满 24 小时（本仓库 `2026-11-21T09:21:30Z`，即**北京时间 2026-11-22 17:21**）。
-分支已经推好，到时间后直接开：
+收录时维护者留言：「发布到 npm 后回复一声，我们会自动切到 npm 主通道」。所以 npm 发布完成后，
+在 [#875](https://github.com/dshplugin/dsh-plugin-hub/issues/875) 回一句即可（它已关闭，评论仍会通知）：
 
 ```
-https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/compare/main...sakemo12:add-sakemo12__harness-lingo-translator?expand=1
+已发布到 npm：dsh plugin --profile web add harness-lingo-translator
 ```
 
-正文用 [`submissions/awesome-dsh-plugin-pr.md`](submissions/awesome-dsh-plugin-pr.md)。
+同时把 [`listing.json`](listing.json) 的 `source.type` 改成 `npm`，再 `pnpm run market:build`，
+让「发现」页索引的安装源也切到 registry。
 
 ### 3. 表单类站点（可选）
 

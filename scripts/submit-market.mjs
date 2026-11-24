@@ -236,9 +236,10 @@ async function repoAgeHours() {
 }
 
 async function findIssue(repo, title) {
-  const result = await api('GET', `/repos/${repo}/issues?state=all&per_page=100`)
+  const query = encodeURIComponent(`repo:${repo} in:title "${title}"`)
+  const result = await api('GET', `/search/issues?q=${query}&per_page=10`)
   if (!result.ok) return undefined
-  return result.data.find((issue) => issue.title === title && issue.pull_request === undefined)
+  return result.data?.items?.find((issue) => issue.title === title && issue.pull_request === undefined)
 }
 
 function suiteTitle() {

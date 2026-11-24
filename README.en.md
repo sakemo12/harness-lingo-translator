@@ -1,5 +1,7 @@
 # Harness Lingo Translator
 
+[![Listed on dsh-plugin.org](https://dsh-plugin.org/badges/listed.svg)](https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator)
+
 ### Use an LLM to translate DeepSeek Harness reasoning and execution, show the translated result in the frontend without polluting the context, make Vibe Coding easier for non-native English speakers, support local translation service sources (hy-mt1.5-1.8b recommended), support translation history cache, hover comparison, custom prompts, and more settings.
 
 ###### This repository is refactored from the previous repository [PerryLink/dsh-translate](https://github.com/PerryLink/dsh-translate); original copyright PerryLink. Current repository: [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo-translator). The package/plugin ID was renamed from `dsh-translate` to `harness-lingo-translator` in 1.14.0.
