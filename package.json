@@ -1,6 +1,6 @@
 {
   "name": "harness-lingo-translator",
-  "version": "1.14.0",
+  "version": "1.14.1",
   "description": "Harness Lingo Translator: full-page translation for DeepSeek Harness backed by a local OpenAI-compatible HY-MT translation model. Translate the rendered web GUI into your language while preserving code, paths, commands, identifiers, numbers and product names. Display-only; the session log is never touched.",
   "keywords": [
     "dsh",
@@ -54,12 +54,9 @@
     "cordis.patch.yml",
     "scripts/migrate-profile.mjs",
     "README.md",
-    "README.en.md",
     "CHANGELOG.md",
-    "SECURITY.md",
-    "PRIVACY.md",
-    "NOTICE",
     "THIRD_PARTY_NOTICES.md",
+    "NOTICE",
     "LICENSE"
   ],
   "dsh": {

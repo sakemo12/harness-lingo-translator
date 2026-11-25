@@ -4,13 +4,13 @@
 
 | 渠道 | 状态 |
 | --- | --- |
-| DSH 官方「发现」页索引 | ✅ 已上线（jsDelivr 可访问，官方校验器通过）；安装源已切到 npm `harness-lingo-translator@1.14.0` |
+| DSH 官方「发现」页索引 | ✅ 已上线（jsDelivr 可访问，官方校验器通过）；安装源已切到 npm `harness-lingo-translator@1.14.1` |
 | dsh-plugin.org（DSH Plugin Hub） | ✅ **已收录并 Verified**（2026-11-21）：<https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator>；issue [#875](https://github.com/dshplugin/dsh-plugin-hub/issues/875) 已关闭，并在 11-25 评论告知 npm 已发布——页面当前仍显示 GitHub 装法，等对方切主通道 |
 | dsh-suite | 🟡 收录 issue [#83](https://github.com/whyihaveyou/dsh-suite/issues/83) 已开，并已补充 npm 包名/版本供目录填 `npm` 字段，等维护者 |
 | awesome-dsh-plugin | ✅ **已合并**（2026-11-24，PR [#18602](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18602)，CI 双检查通过） |
 | awesome-DSH-plugin（Alex-Yanggg） | 🟡 PR [#200](https://github.com/Alex-Yanggg/awesome-DSH-plugin/pull/200) 已开（catalog + 中文镜像 + 英文目录），11-25 留了一条礼貌催办 + npm 安装命令 |
 | dshbase | ⏳ 未收录：它按 npm/GitHub 元数据批量抓取，目前页面仍是通用目录（数据快照滞后）；topic 已加，等下一轮 |
-| npm | ✅ **已发布 `harness-lingo-translator@1.14.0`**（2026-11-25）：<https://www.npmjs.com/package/harness-lingo-translator>；索引安装源已切到 registry |
+| npm | ✅ **已发布 `harness-lingo-translator@1.14.1`**（2026-11-26，1.14.0 于 11-25 首发）：<https://www.npmjs.com/package/harness-lingo-translator>；索引安装源已切到 registry |
 | dsh.so / AllDSH / DSH Hub / dshai.org | ⬜ 表单类，复制 [`submissions/dsh-plugin-org.md`](submissions/dsh-plugin-org.md) 改写即可 |
 
 ```sh

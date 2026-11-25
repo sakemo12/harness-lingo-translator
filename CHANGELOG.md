@@ -3,6 +3,18 @@
 > 1.14.0 renamed the project from `dsh-translate` to
 > `harness-lingo-translator`. Entries before 1.14.0 use the old name.
 
+## [1.14.1] - 2026-11-26
+
+### Changed
+
+- Trimmed the npm tarball to the plugin plus the documents it needs: the shipped
+  set is `index.mjs`, `typert.host.mjs`, `lib/`, `client/`, `locale/`, `icon.svg`,
+  `cordis.patch.yml`, `scripts/migrate-profile.mjs`, `README.md`, `CHANGELOG.md`,
+  `LICENSE`, `NOTICE` and `THIRD_PARTY_NOTICES.md`. `PRIVACY.md`, `SECURITY.md`
+  and `README.en.md` stay in the repository only (npm force-includes every
+  `README*`, so `README.en.md` still appears in the tarball).
+- No runtime change.
+
 ## [Unreleased]
 
 ### Added
