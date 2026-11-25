@@ -27,7 +27,7 @@ the masked text is restored verbatim. Session logs and workspace files are never
 ## Install
 
 ```sh
-dsh plugin --profile web add github:sakemo12/harness-lingo-translator
+dsh plugin --profile web add harness-lingo-translator
 ```
 
 Upstream of this fork: https://github.com/PerryLink/dsh-translate. Apache-2.0, Copyright 2026 PerryLink; modifications Copyright 2026 sakemo12.

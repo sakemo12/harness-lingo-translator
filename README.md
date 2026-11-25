@@ -64,7 +64,7 @@ curl http://127.0.0.1:8000/v1/models
 
 ### 2. 安装插件
 
-npm 包（已发布时，`dsh plugin` 会直接装预构建代码，不需要任何构建授权）：
+npm（推荐，已发布 `1.14.0`；`dsh plugin` 直接装预构建代码，不需要任何构建授权）：
 
 ```sh
 dsh plugin --profile web add harness-lingo-translator

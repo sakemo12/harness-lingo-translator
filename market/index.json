@@ -77,9 +77,7 @@
           "version": "1.14.0",
           "publishTimestamp": 1795257518,
           "source": {
-            "type": "git",
-            "url": "https://github.com/sakemo12/harness-lingo-translator",
-            "commit": "00f208697027b83d2b8ee6117bfaa8f18db22ff8"
+            "type": "npm"
           },
           "engines": {
             "dsh": ">=0.2.1-0 <0.3.0"

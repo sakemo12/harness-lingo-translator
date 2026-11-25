@@ -299,7 +299,7 @@ function awesomePullRequest() {
     '## Install',
     '',
     '```sh',
-    listing.descriptions.install.git,
+    sourceType === 'npm' ? listing.descriptions.install.npm : listing.descriptions.install.git,
     '```',
     '',
     `Upstream of this fork: ${'https://github.com/PerryLink/dsh-translate'}. Apache-2.0, Copyright 2026 PerryLink; modifications Copyright 2026 sakemo12.`,
@@ -340,7 +340,7 @@ function alexPullRequest() {
     '## Install',
     '',
     '```sh',
-    listing.descriptions.install.git,
+    sourceType === 'npm' ? listing.descriptions.install.npm : listing.descriptions.install.git,
     '```',
     '',
     'Apache-2.0. Community plugin, not affiliated with DeepSeek.',
@@ -356,7 +356,7 @@ function dshSuiteIssue() {
     '',
     '## 插件信息 / Plugin info',
     '',
-    `- **npm 包名 / package name**：\`${pluginName}\`（尚未发布到 npm，待发布后补 / not yet on npm）`,
+    `- **npm 包名 / package name**：\`${pluginName}\`${sourceType === 'npm' ? '（已发布 / published）' : '（尚未发布到 npm，待发布后补 / not yet on npm）'}`,
     `- **GitHub 仓库 / repo**：\`${listing.author}/${pluginName}\``,
     `- **一句话描述 / one-line description**：${short.zh}`,
     `- **分类 / category**：\`${listing.category.byMarket['dsh-suite']}\``,
@@ -419,8 +419,10 @@ function dshPluginOrgIssue() {
     'UI & Experience',
     '',
     '### Install command',
-    listing.descriptions.install.git,
-    `(npm: \`${listing.descriptions.install.npm}\` once the package is published)`,
+    sourceType === 'npm' ? listing.descriptions.install.npm : listing.descriptions.install.git,
+    sourceType === 'npm'
+      ? `(source install: \`${listing.descriptions.install.git}\`)`
+      : `(npm: \`${listing.descriptions.install.npm}\` once the package is published)`,
     '',
     '### Compatibility',
     listing.descriptions.compatibility.en,
@@ -486,8 +488,11 @@ async function verifyOnline(value) {
   }
 
   const npm = await npmNameStatus(pluginName)
-  if (npm === 'taken') failures.push(`npm: ${pluginName} is already published; switch market/listing.json source.type to "npm" and rebuild`)
-  if (npm === 'free') notes.push(`npm name ${pluginName} is free; publish it to appear in the DSH Plugin Hub and dshbase`)
+  const npmSource = value.plugins[0].versions.some((version) => version.source.type === 'npm')
+  if (npmSource && npm === 'free') failures.push(`npm: the index installs from ${pluginName}@${pkg.version} but the registry has no such package`)
+  if (npmSource && npm === 'taken') notes.push(`npm: ${pluginName} is on the registry, matching the index source`)
+  if (!npmSource && npm === 'taken') notes.push(`npm: ${pluginName} is published; switch market/listing.json source.type to "npm" and rebuild when you want registry installs`)
+  if (!npmSource && npm === 'free') notes.push(`npm name ${pluginName} is free; publish it to appear in the DSH Plugin Hub and dshbase`)
   if (npm === 'unknown') notes.push(`npm registry did not answer; could not confirm the ${pluginName} name`)
 
   for (const version of value.plugins[0].versions) {

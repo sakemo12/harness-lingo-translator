@@ -64,7 +64,7 @@ curl http://127.0.0.1:8000/v1/models
 
 ### 2. Install the plugin
 
-From npm (once published — `dsh plugin` installs prebuilt code, no build permission needed):
+From npm (recommended, `1.14.0` is published — `dsh plugin` installs prebuilt code, no build permission needed):
 
 ```sh
 dsh plugin --profile web add harness-lingo-translator

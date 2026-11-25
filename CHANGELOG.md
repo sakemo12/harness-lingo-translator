@@ -23,6 +23,9 @@
 
 ### Changed
 
+- Published to npm as `harness-lingo-translator@1.14.0` (2026-11-25); the
+  marketplace index now installs from the registry (`name@version`) instead of a
+  commit-pinned git URL, and the READMEs lead with the npm command.
 - The repository icon's `aria-label` is the current package name.
 - Listed and verified on dsh-plugin.org (2026-11-21); the repository now carries
   the `dsh-plugin` topic set that DSH directories crawl, and both READMEs carry

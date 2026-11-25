@@ -24,7 +24,7 @@ One entry added to `catalog/plugins.json`; the Chinese mirror regenerated with
 ## Install
 
 ```sh
-dsh plugin --profile web add github:sakemo12/harness-lingo-translator
+dsh plugin --profile web add harness-lingo-translator
 ```
 
 Apache-2.0. Community plugin, not affiliated with DeepSeek.

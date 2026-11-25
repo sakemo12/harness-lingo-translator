@@ -4,7 +4,7 @@
 
 ## 插件信息 / Plugin info
 
-- **npm 包名 / package name**：`harness-lingo-translator`（尚未发布到 npm，待发布后补 / not yet on npm）
+- **npm 包名 / package name**：`harness-lingo-translator`（已发布 / published）
 - **GitHub 仓库 / repo**：`sakemo12/harness-lingo-translator`
 - **一句话描述 / one-line description**：在 DSH Web 界面显示思考与回复的译文，翻译走本地 OpenAI 兼容模型；代码与路径保持原样。
 - **分类 / category**：`ui`

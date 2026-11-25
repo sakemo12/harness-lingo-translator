@@ -4,13 +4,13 @@
 
 | 渠道 | 状态 |
 | --- | --- |
-| DSH 官方「发现」页索引 | ✅ 已上线（jsDelivr 可访问，官方校验器通过） |
+| DSH 官方「发现」页索引 | ✅ 已上线（jsDelivr 可访问，官方校验器通过）；安装源已切到 npm `harness-lingo-translator@1.14.0` |
 | dsh-plugin.org（DSH Plugin Hub） | ✅ **已收录并 Verified**（2026-11-21）：<https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator>；提交 issue [#875](https://github.com/dshplugin/dsh-plugin-hub/issues/875) 已关闭，对方留言「发布到 npm 后回复一声，会自动切到 npm 主通道」 |
 | dsh-suite | 🟡 收录 issue [#83](https://github.com/whyihaveyou/dsh-suite/issues/83) 已开，等维护者 |
 | awesome-dsh-plugin | ✅ **已合并**（2026-11-24，PR [#18602](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18602)，CI 双检查通过） |
 | awesome-DSH-plugin（Alex-Yanggg） | 🟡 PR [#200](https://github.com/Alex-Yanggg/awesome-DSH-plugin/pull/200) 已开（catalog + 中文镜像 + 英文目录），等维护者 |
 | dshbase | ⏳ 未收录：它按 npm/GitHub 元数据批量抓取，目前页面仍是通用目录（数据快照滞后）；topic 已加，等下一轮 |
-| npm | ⬜ 名字 `harness-lingo-translator` 未被占用，等发布——发布后 Hub 内市场与 dshbase 都会切到 npm 主通道 |
+| npm | ✅ **已发布 `harness-lingo-translator@1.14.0`**（2026-11-25）：<https://www.npmjs.com/package/harness-lingo-translator>；索引安装源已切到 registry |
 | dsh.so / AllDSH / DSH Hub / dshai.org | ⬜ 表单类，复制 [`submissions/dsh-plugin-org.md`](submissions/dsh-plugin-org.md) 改写即可 |
 
 ```sh
@@ -38,20 +38,24 @@ https://cdn.jsdelivr.net/gh/sakemo12/harness-lingo-translator@main/market/index.
 
 ## 剩余动作
 
-### 1. 发布到 npm（渠道 1 的内市场、渠道 2 的 npm 映射）
+### 1. 后续发版
 
 ```sh
-npm login --registry=https://registry.npmjs.org
-npm publish --registry=https://registry.npmjs.org --access public
+# 1) 升版本、跑门禁、提交（这个提交就是新的发布提交）
+pnpm test && pnpm run lint && pnpm run verify:self-contained
+git add -A && git commit -m "release: vX.Y.Z"
+# 2) 用这个提交重建市场物料
+pnpm run market:build && git add market && git commit -m "market: publish vX.Y.Z"
+# 3) 打标签推送（Release 工作流建 GitHub Release）
+git tag -a vX.Y.Z -m vX.Y.Z && git push origin main --tags
+# 4) 发 npm（先 npm login，或配 NPM_TOKEN 走 Actions → Publish to npm）
+npm publish --access public
 ```
 
-或走 Actions → **Publish to npm**（先在仓库 Secrets 配 `NPM_TOKEN`）。发布后把 [`listing.json`](listing.json)
-的 `source.type` 改成 `npm`，再 `pnpm run market:build`，索引安装源就从「锚定提交」变成 `name@version`。
+`listing.json` 的 `source.type` 已经是 `npm`，所以索引会自动装 `harness-lingo-translator@X.Y.Z`；
+只有想回到「锚定提交」的装法时才需要改回 `git`。
 
-> 网络考虑：`git+https://github.com/...` 与 `github:owner/repo` 两种装法都要连 GitHub。国内网络下 npm 包
-> （含镜像 registry）是唯一稳的装法，所以 npm 不只是「让 Hub 一键装」，也是让墙内用户装得上。
-
-### 2. npm 发布后回复 dsh-plugin.org
+### 2. 回复 dsh-plugin.org（已做，留作记录）
 
 收录时维护者留言：「发布到 npm 后回复一声，我们会自动切到 npm 主通道」。所以 npm 发布完成后，
 在 [#875](https://github.com/dshplugin/dsh-plugin-hub/issues/875) 回一句即可（它已关闭，评论仍会通知）：

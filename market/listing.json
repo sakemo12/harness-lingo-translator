@@ -79,7 +79,7 @@
     }
   },
   "source": {
-    "$comment": "git = install from a pinned commit; switch to npm after the first `npm publish` and rebuild.",
-    "type": "git"
+    "$comment": "git = install from a pinned commit; npm = install from the registry after the first publish.",
+    "type": "npm"
   }
 }
