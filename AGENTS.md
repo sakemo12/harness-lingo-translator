@@ -192,20 +192,20 @@ uses the host's own model credentials.
 runbook (which marketplace needs what, and which step still needs a human).
 
 - **One copy source.** `market/listing.json` owns the title, category, labels,
-  keywords and every description length (zh/en). Never edit the generated
-  `market/index.json` or `market/submissions/*`; `pnpm run market:build`
-  regenerates them from it and `pnpm run market:check` (also a CI gate) fails on
-  drift. All copy must stay factual: awesome-dsh-plugin rejects claims the code
+  keywords and every description length (zh/en). `pnpm run market:build`
+  regenerates `market/index.json` (the only versioned artifact, because the live
+  index URL serves it) and `market/submissions/*` (scratch copy for a listing PR
+  or issue; gitignored). Never hand-edit either; `pnpm run market:check` (a CI
+  gate) fails on index drift. All copy must stay factual: awesome-dsh-plugin rejects claims the code
   does not back up and caps `descriptions.short` at 140 characters, which the
   builder enforces together with the single-line/period/no-marketing-word rules.
-- **The index pins the release commit.** `market/index.json` is a format-1
-  plugin-market index; its `versions[].source` is a `git+https` install target
-  pinned to the commit that carries the released code, so build it *before*
-  committing the regenerated artifacts (the pinned SHA is then the release
-  commit, not the docs commit). A version bump picks the current `HEAD`
-  automatically; `--commit <sha>` overrides it. Switching `listing.json`
-  `source.type` to `npm` after the first publish makes the index use
-  `name@version`.
+- **The index follows the release.** `market/index.json` is a format-1
+  plugin-market index. With `listing.json` `source.type: "npm"` (the current
+  value) each version installs `name@version` from the registry; with `"git"`
+  it pins a `git+https` target to the commit that carries the released code,
+  which is why a git index is built *before* committing the regenerated
+  artifacts. A version bump picks the current `HEAD` automatically and
+  `--commit <sha>` overrides it.
 - **Static assets are checked, not trusted.** The SVG icon is inlined as a
   `data:image/svg+xml;base64` URL in the index (the list reject SVG icons, the
   index accepts an inline one), and the builder mirrors the format-1 rules

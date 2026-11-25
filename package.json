@@ -96,8 +96,7 @@
     "verify:self-contained": "node scripts/verify-self-contained.mjs",
     "market:build": "node scripts/build-market.mjs",
     "market:check": "node scripts/build-market.mjs --check",
-    "market:verify": "node scripts/build-market.mjs --check --verify",
-    "market:submit": "node scripts/submit-market.mjs"
+    "market:verify": "node scripts/build-market.mjs --check --verify"
   },
   "repository": {
     "type": "git",

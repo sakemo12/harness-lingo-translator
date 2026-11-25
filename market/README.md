@@ -11,7 +11,7 @@
 | awesome-DSH-plugin（Alex-Yanggg） | 🟡 PR [#200](https://github.com/Alex-Yanggg/awesome-DSH-plugin/pull/200) 已开（catalog + 中文镜像 + 英文目录），11-25 留了一条礼貌催办 + npm 安装命令 |
 | dshbase | ⏳ 未收录：它按 npm/GitHub 元数据批量抓取，目前页面仍是通用目录（数据快照滞后）；topic 已加，等下一轮 |
 | npm | ✅ **已发布 `harness-lingo-translator@1.14.1`**（2026-11-26，1.14.0 于 11-25 首发）：<https://www.npmjs.com/package/harness-lingo-translator>；索引安装源已切到 registry |
-| dsh.so / AllDSH / DSH Hub / dshai.org | ⬜ 表单类，复制 [`submissions/dsh-plugin-org.md`](submissions/dsh-plugin-org.md) 改写即可 |
+| dsh.so / AllDSH / DSH Hub / dshai.org | ⬜ 表单类：`pnpm run market:build` 后复制 `market/submissions/dsh-plugin-org.md` 改写即可 |
 
 ```sh
 pnpm run market:build    # 由 listing.json 重新生成 index.json 与 submissions/*
@@ -20,7 +20,7 @@ pnpm run market:verify   # 联网核对 topic、仓库年龄、npm 包名、锚�
 pnpm run market:submit status   # 已提交的 issue / PR / topic 现场（只读）
 ```
 
-> 不要手改 `index.json` 或 `submissions/`：由 `scripts/build-market.mjs` 生成，`market:check` 会拦下漂移。
+> 不要手改 `index.json`（`market:check` 会拦下漂移）；提交材料是本地临时产物，也不该手改。
 > 文案只改 [`listing.json`](listing.json)。
 
 ## 索引源（已经可用）
@@ -69,32 +69,24 @@ npm publish --access public
 
 ### 3. 表单类站点（可选）
 
-dsh.so、AllDSH、DSH Hub、dshai.org 都是网页表单，把 [`submissions/dsh-plugin-org.md`](submissions/dsh-plugin-org.md)
-的字段复制过去即可（同一份中英简介）。
+dsh.so、AllDSH、DSH Hub、dshai.org 都是网页表单：先 `pnpm run market:build` 生成
+`market/submissions/dsh-plugin-org.md`，把里面的字段复制过去即可（同一份中英简介）。
 
-## 提交流程（带令牌时）
+## 提交材料的存放方式
 
-`scripts/submit-market.mjs` 走 GitHub REST API，令牌从 `GH_TOKEN` 或 `~/.dsh-market-token` 读，从不打印。
-没有 `--apply` 时只打印将要做的事。
+`market/submissions/` 里的 YAML、catalog 条目、issue/PR 正文都**不进仓库**（`.gitignore` 已忽略），
+需要时用 `pnpm run market:build` 现生成；仓库里只版本化两个文件：
 
-```sh
-node scripts/submit-market.mjs status              # 只读
-node scripts/submit-market.mjs topics  --apply     # 加 dsh-plugin 等 topic
-node scripts/submit-market.mjs issues  --apply     # 开 dsh-suite / dsh-plugin.org 收录 issue
-node scripts/submit-market.mjs fork-awesome --apply # 建 fork + 分支 + 提交 YAML（24h 内不自动开 PR）
-```
+- `market/index.json` — 线上索引（CDN 直接取它），必须跟着版本走
+- `market/listing.json` — 文案源，索引与提交材料都从它生成
 
-令牌要求：**classic PAT，scope `public_repo`**（`ghp_...`，7 天过期）。生成入口
-<https://github.com/settings/tokens/new?scopes=public_repo&description=dsh-plugin-market>，
-存到 `~/.dsh-market-token`（`chmod 600`），用完删掉。
+一次性提交（已全部完成，留档备查）：
 
-### 两个 awesome 列表的 PR 为什么走 git 而不是纯 API
-
-- **awesome-DSH-plugin（Alex-Yanggg）**：PR 必须同时包含 `catalog/plugins.json` 里的一条、由列表自带
-  `scripts/generate_readmes.py` 重新生成的中文镜像 `docs/README.zh-CN.md`，以及手工维护的英文目录 `README.md`
-  那一行。所以流程是：fork → clone → 写入条目 → `python3 scripts/generate_readmes.py` → 补英文行 → 提交 → 开 PR。
-- **awesome-dsh-plugin**：规则是「一个 PR 只加一个文件」，所以 API 直接提交 `data/plugins/<owner>__<repo>.yml`
-  就够了；但 CI 会检查仓库年龄（R5），因此 branch 先推、PR 后开。
+- **awesome-dsh-plugin**：一个 PR 只加一个文件，直接提交 `data/plugins/<owner>__<repo>.yml`；
+  CI 会检查仓库年龄（R5 ≥24h）
+- **awesome-DSH-plugin（Alex-Yanggg）**：PR 必须同时含 `catalog/plugins.json` 的一条、用列表自带
+  `scripts/generate_readmes.py` 重新生成的中文镜像 `docs/README.zh-CN.md`、以及手工维护的英文 `README.md` 那一行
+- **dsh-plugin.org / dshbase**：topic 与 npm 元数据驱动，无需手工提交
 
 ## 维护：发新版本时
 

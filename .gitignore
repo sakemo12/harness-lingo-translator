@@ -22,3 +22,6 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Generated marketplace copy (recreate with `pnpm run market:build`)
+market/submissions/

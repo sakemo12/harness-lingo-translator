@@ -17,6 +17,14 @@
 
 ## [Unreleased]
 
+### Removed
+
+- The one-time marketplace scaffolding: `market/submissions/` (regenerated on
+  demand by `pnpm run market:build` and now gitignored), the
+  `scripts/submit-market.mjs` helper that filed the listings, and the
+  unreferenced `CODE_OF_CONDUCT.md`. Only `market/index.json` and
+  `market/listing.json` stay versioned.
+
 ### Added
 
 - Marketplace distribution under `market/`: a format-1 plugin-market index

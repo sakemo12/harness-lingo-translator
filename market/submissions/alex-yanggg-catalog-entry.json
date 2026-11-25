@@ -1,9 +1,0 @@
-{
-  "name": "harness-lingo-translator",
-  "url": "https://github.com/sakemo12/harness-lingo-translator",
-  "category": "ui-user-experience",
-  "description": {
-    "en": "Shows translated thinking and replies in the DSH web UI through a local OpenAI-compatible model; code and paths stay verbatim.",
-    "zh-CN": "在 DSH Web 界面显示思考与回复的译文，翻译走本地 OpenAI 兼容模型；代码与路径保持原样。"
-  }
-}

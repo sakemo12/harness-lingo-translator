@@ -103,8 +103,12 @@ outputs.set(join(SUBMISSIONS, 'dsh-suite-issue.md'), dshSuiteIssue())
 outputs.set(join(SUBMISSIONS, 'dsh-plugin-org.md'), dshPluginOrgIssue())
 
 mkdirSync(SUBMISSIONS, { recursive: true })
+// `market/index.json` is the only generated artifact that is versioned: the
+// submission copy is scratch output for a listing PR or issue and is gitignored.
+const tracked = new Set([INDEX_PATH])
 const drifted = []
 for (const [path, content] of outputs) {
+  if (checkOnly && !tracked.has(path)) continue
   const current = existsSync(path) ? readFileSync(path, 'utf8') : undefined
   if (checkOnly) {
     if (current !== content) drifted.push(relative(ROOT, path))
@@ -120,7 +124,7 @@ if (checkOnly) {
     for (const path of drifted) console.error(`  - ${path}`)
     process.exit(1)
   }
-  console.log(`market: ${String(outputs.size)} artifacts are up to date (v${pkg.version}, source ${sourceType === 'git' ? `git ${commit.slice(0, 7)}` : 'npm'})`)
+  console.log(`market: index is up to date (v${pkg.version}, source ${sourceType === 'git' ? `git ${commit.slice(0, 7)}` : 'npm'})`)
 }
 
 if (verify) await verifyOnline(index)
