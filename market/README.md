@@ -7,7 +7,7 @@
 | DSH 官方「发现」页索引 | ✅ 已上线（jsDelivr 可访问，官方校验器通过） |
 | dsh-plugin.org（DSH Plugin Hub） | ✅ **已收录并 Verified**（2026-11-21）：<https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator>；提交 issue [#875](https://github.com/dshplugin/dsh-plugin-hub/issues/875) 已关闭，对方留言「发布到 npm 后回复一声，会自动切到 npm 主通道」 |
 | dsh-suite | 🟡 收录 issue [#83](https://github.com/whyihaveyou/dsh-suite/issues/83) 已开，等维护者 |
-| awesome-dsh-plugin | 🟡 PR [#18602](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18602) 已开（1 文件），CI 排队中 |
+| awesome-dsh-plugin | ✅ **已合并**（2026-11-24，PR [#18602](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18602)，CI 双检查通过） |
 | awesome-DSH-plugin（Alex-Yanggg） | 🟡 PR [#200](https://github.com/Alex-Yanggg/awesome-DSH-plugin/pull/200) 已开（catalog + 中文镜像 + 英文目录），等维护者 |
 | dshbase | ⏳ 未收录：它按 npm/GitHub 元数据批量抓取，目前页面仍是通用目录（数据快照滞后）；topic 已加，等下一轮 |
 | npm | ⬜ 名字 `harness-lingo-translator` 未被占用，等发布——发布后 Hub 内市场与 dshbase 都会切到 npm 主通道 |
