@@ -1,6 +1,6 @@
 # Harness Lingo Translator
 
-[![Listed on dsh-plugin.org](https://dsh-plugin.org/badges/listed.svg)](https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator)
+[![npm](https://img.shields.io/npm/v/harness-lingo-translator.svg)](https://www.npmjs.com/package/harness-lingo-translator) [![Listed on dsh-plugin.org](https://dsh-plugin.org/badges/listed.svg)](https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator)
 
 ### 使用大语言模型翻译Deepseek Harness思考、执行过程，在不污染上下文的情况下在前端显示翻译结果，便利非英文母语用户Vibe Coding，支持本地翻译服务来源（推荐hy-mt1.5-1.8b），支持翻译历史缓存，支持悬停对照，支持自定义提示词，更多设置选项。
 

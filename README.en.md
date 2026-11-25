@@ -1,6 +1,6 @@
 # Harness Lingo Translator
 
-[![Listed on dsh-plugin.org](https://dsh-plugin.org/badges/listed.svg)](https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator)
+[![npm](https://img.shields.io/npm/v/harness-lingo-translator.svg)](https://www.npmjs.com/package/harness-lingo-translator) [![Listed on dsh-plugin.org](https://dsh-plugin.org/badges/listed.svg)](https://dsh-plugin.org/plugins/sakemo12/harness-lingo-translator)
 
 ### Use an LLM to translate DeepSeek Harness reasoning and execution, show the translated result in the frontend without polluting the context, make Vibe Coding easier for non-native English speakers, support local translation service sources (hy-mt1.5-1.8b recommended), support translation history cache, hover comparison, custom prompts, and more settings.
 
