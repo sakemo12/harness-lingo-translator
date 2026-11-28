@@ -29,6 +29,10 @@
   layer. Baseline is also remembered per `[data-chat-flow-key]` + text, so a
   React re-render that replaces the parent subtree is treated as baseline while
   the newly revealed reasoning body still translates.
+- A collapsed reasoning summary that was already visible no longer bypasses the
+  baseline. The old `releaseThinkSummaries` / `forceTranslatable` exception was
+  removed; only a newly appeared or newly revealed summary is translated and
+  truncated to `THINK_SUMMARY_MAX`.
 - The floating switch is no longer disabled while translating; clicking it stops
   the run and restores the originals. Error messages are localized (Chinese in a
   Chinese UI), shown above the button instead of beside it, and unknown details

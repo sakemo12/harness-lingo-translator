@@ -476,14 +476,29 @@ test('re-enabling shows cached translations again without new requests', async (
   })
 })
 
-test('translates a collapsed reasoning summary that already existed, truncated', async () => {
-  await withEngine('', {}, async (engine) => {
+test('keeps a collapsed reasoning summary that was already visible original', async () => {
+  await withEngine('', {}, async (engine, api) => {
     const row = document.createElement('div')
     row.setAttribute('data-variant', 'think')
-    const summary = paragraph('First paragraph preview text that was visible before enabling and is long enough to exceed the collapsed limit. '.repeat(3).trim())
+    const text = 'First paragraph preview text that was visible before enabling and is long enough to exceed the collapsed limit. '.repeat(3).trim()
+    const summary = paragraph(text)
     row.appendChild(summary)
     document.body.appendChild(row)
     await engine.start()
+    await delay(700)
+    assert.equal(summary.textContent, text)
+    assert.equal(api.calls.translate, 0)
+  })
+})
+
+test('translates a newly appeared collapsed reasoning summary, truncated', async () => {
+  await withEngine('', {}, async (engine) => {
+    await engine.start()
+    const row = document.createElement('div')
+    row.setAttribute('data-variant', 'think')
+    const summary = paragraph('First paragraph preview text that appeared after enabling and is long enough to exceed the collapsed limit. '.repeat(3).trim())
+    row.appendChild(summary)
+    document.body.appendChild(row)
     await waitFor(() => summary.textContent.startsWith('译 '))
     assert.ok(summary.textContent.endsWith('…'))
     assert.ok(summary.textContent.length <= 170)
@@ -504,18 +519,19 @@ test('re-applies a translation when the app renders the original text again', as
   })
 })
 
-test('keeps the collapsed reasoning summary translated when the row expands', async () => {
+test('keeps a newly translated collapsed reasoning summary when the row expands', async () => {
   await withEngine('', {}, async (engine, api) => {
+    await engine.start()
     const row = document.createElement('div')
     row.setAttribute('data-variant', 'think')
-    const summary = paragraph('First paragraph preview text that stays translated after expanding.')
+    const text = 'First paragraph preview text that stays translated after expanding.'
+    const summary = paragraph(text)
     row.appendChild(summary)
     document.body.appendChild(row)
-    await engine.start()
     await waitFor(() => summary.textContent.startsWith('译 '))
     const count = api.calls.translate
     row.setAttribute('data-expanded', '')
-    summary.nodeValue = 'First paragraph preview text that stays translated after expanding.'
+    summary.nodeValue = text
     await delay(150)
     assert.ok(summary.textContent.startsWith('译 '))
     assert.equal(api.calls.translate, count)

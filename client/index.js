@@ -524,8 +524,6 @@ window.__ModuleLoader__.load({
       // expands. Remember baseline strings per chat-flow key as well, so the
       // already-visible parent layer is not treated as new content.
       var baselineTexts = new Map()
-      // Nodes explicitly released from the baseline (collapsed thought previews).
-      var forceTranslatable = new WeakSet()
       // Per-segment request protection: a segment that keeps failing is retried
       // a bounded number of times (with backoff), never once per mutation.
       var failures = new Map()
@@ -1320,20 +1318,11 @@ window.__ModuleLoader__.load({
         texts.add(text)
       }
 
-      function forgetBaselineText(node) {
-        var group = baselineGroupOf(node)
-        if (group === null) return
-        var texts = baselineTexts.get(group)
-        if (texts !== undefined) texts.delete(nodeText(node))
-      }
-
       /**
        * Baseline by node identity, or by identical text inside the same chat
-       * flow after React replaced the original node. A forced node (collapsed
-       * thought preview) is never baseline.
+       * flow after React replaced the original node.
        */
       function isBaselineText(node, original) {
-        if (forceTranslatable.has(node)) return false
         if (baseline.get(node) === original) return true
         var group = baselineGroupOf(node)
         if (group === null) return false
@@ -1346,7 +1335,6 @@ window.__ModuleLoader__.load({
       function markBaseline() {
         baseline = new WeakMap()
         baselineTexts = new Map()
-        forceTranslatable = new WeakSet()
         var nodes = collectNodes(document.body)
         for (var i = 0; i < nodes.length; i += 1) {
           var text = nodeText(nodes[i])
@@ -1381,21 +1369,6 @@ window.__ModuleLoader__.load({
           var restored = restoreText(hit, protectedText.slots)
           if (restored === null) continue
           applyValueWithHeight(node, original, restored)
-        }
-      }
-
-      /**
-       * Collapsed reasoning summaries are visible first-paragraph excerpts, so
-       * they are translated even when they existed before the switch was turned
-       * on; expanded/normal content keeps the baseline rule.
-       */
-      function releaseThinkSummaries() {
-        var nodes = collectNodes(document.body)
-        for (var i = 0; i < nodes.length; i += 1) {
-          if (collapsedThinkRow(nodes[i]) === null) continue
-          baseline.delete(nodes[i])
-          forceTranslatable.add(nodes[i])
-          forgetBaselineText(nodes[i])
         }
       }
 
@@ -1473,7 +1446,6 @@ window.__ModuleLoader__.load({
             }
           }
           reapplyCached()
-          releaseThinkSummaries()
           startObserver()
           startHover()
           // Catch anything that appeared while the status probe was in flight.

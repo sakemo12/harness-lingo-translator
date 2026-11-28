@@ -15,7 +15,7 @@
 - **Hover comparison**: a stationary hover shows the original and moving away restores the translation; the block height is pinned to the larger of the original/translated heights, so the layout does not jump.
 - **More settings**: connection mode, custom prompt header, hover delay, concurrency, multi-paragraph reasoning batching, cache cleanup and more.
 - **Controllable translation**: the switch stays clickable while translating; clicking it turns translation off and restores the originals. Errors are shown above the button and follow the UI language.
-- **Passive translation**: on first enable, text already on screen stays original (even if cached); only content that appears, changes or is newly revealed afterwards is translated. Newly generated content follows automatically, and a collapsed reasoning block translates just its first paragraph as a preview.
+- **Passive translation**: on first enable, text already on screen stays original (even if cached); only content that appears, changes or is newly revealed afterwards is translated. Newly generated content follows automatically, and a newly appeared/revealed collapsed reasoning block translates just its first paragraph as a preview.
 
 ## Quick start
 
@@ -122,7 +122,7 @@ The browser walks the rendered DOM, masks code, paths, commands, URLs, identifie
 
 ```sh
 pnpm install
-pnpm test        # 166 cases
+pnpm test        # 167 cases
 pnpm run lint
 pnpm run verify:self-contained
 pnpm pack

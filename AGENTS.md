@@ -113,8 +113,8 @@ uses the host's own model credentials.
   text nodes; baseline is therefore remembered per `[data-chat-flow-key]` +
   text (`baselineTexts`), and a new node whose text matches a baseline string in
   the same flow counts as baseline. The newly revealed reasoning body has no
-  baseline entry and still translates. Collapsed thought previews are
-  `forceTranslatable` and bypass both checks.
+  baseline entry and still translates. Collapsed thoughts are not a special
+  case: a summary that was visible at baseline stays original.
 - **Per-workspace cache document.** The only host file write is
   `~/.dsh/cache/harness-lingo-translator/<sha256(workspace)>.json` (never inside the
   workspace). Entries are content-addressed by `configHash + "\0" + masked
@@ -140,9 +140,10 @@ uses the host's own model credentials.
   (`translatedKeys`), so turning the switch back on restores them without
   requests. A fresh page must not replay a warm cache onto text that was already
   visible when the switch was first turned on: the baseline wins on first start.
-  Collapsed reasoning rows bypass the baseline for their visible summary and
-  display a translation truncated to `THINK_SUMMARY_MAX` (160); the hidden body
-  still waits for expansion.
+  Collapsed reasoning summaries follow the baseline: one that was already
+  visible stays original; a newly appeared or newly revealed summary is
+  translated and truncated to `THINK_SUMMARY_MAX` (160); the hidden body still
+  waits for expansion.
 - **Passive triggers.** On the first enable, the switch snapshots the text already
   visible and translates nothing from that snapshot; only blocks that finish
   generating, text that changes afterwards, and collapsed content that is later
