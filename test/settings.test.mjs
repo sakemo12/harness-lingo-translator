@@ -218,6 +218,7 @@ test('the translation and hover tabs show only their own fields', () => {
   assert.match(translation, /遮罩格式/)
   assert.match(translation, /value="\[n\]"/)
   assert.match(translation, /更高的模型智商/)
+  assert.match(translation, /（一般来说默认模式准确度已经极高，开启此项目反而可能会引入错误）/)
   assert.match(translation, /自定义关键词保留提示词/)
   assert.match(translation, /<textarea/)
   assert.equal(translation.includes('服务地址'), false)
