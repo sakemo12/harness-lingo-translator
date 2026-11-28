@@ -14,7 +14,7 @@
 - **Content fidelity**: code, paths, URLs, identifiers and other protected spans are masked as `⟦n⟧`; when translation finishes, the translated text is written back into the original text nodes, keeping the rendering faithful.
 - **Hover comparison**: a stationary hover shows the original and moving away restores the translation; the block height is pinned to the larger of the original/translated heights, so the layout does not jump.
 - **More settings**: connection mode, custom prompt header, hover delay, concurrency, multi-paragraph reasoning batching, cache cleanup and more.
-- **Passive translation**: only visible content is eligible; newly generated content is picked up automatically, and a collapsed reasoning block translates just its first paragraph as a preview.
+- **Passive translation**: on first enable, text already on screen stays original (even if cached); only content that appears, changes or is newly revealed afterwards is translated. Newly generated content follows automatically, and a collapsed reasoning block translates just its first paragraph as a preview.
 
 ## Quick start
 
@@ -121,7 +121,7 @@ The browser walks the rendered DOM, masks code, paths, commands, URLs, identifie
 
 ```sh
 pnpm install
-pnpm test        # 161 cases
+pnpm test        # 163 cases
 pnpm run lint
 pnpm run verify:self-contained
 pnpm pack

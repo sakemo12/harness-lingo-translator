@@ -510,6 +510,9 @@ window.__ModuleLoader__.load({
       var state = { enabled: false, working: false, generation: 0, error: null }
       var originals = new Map()
       var displayed = new Map()
+      // Cache keys translated during this page session. Re-enabling restores
+      // only these; a first start must leave already-visible text untouched.
+      var translatedKeys = new Set()
       // Blocks whose height was pinned to max(original, translated). The record
       // keeps the inline `min-height` to put back when translation stops.
       var pinnedHeights = new Map()
@@ -546,6 +549,11 @@ window.__ModuleLoader__.load({
 
       function cacheKey(masked) {
         return configHash + '\u0000' + targetLang + '\u0000' + masked
+      }
+
+      /** Remember a segment translated in this page session for re-enable. */
+      function rememberTranslated(key) {
+        if (typeof key === 'string' && key.length > 0) translatedKeys.add(key)
       }
 
       function currentSessionId() {
@@ -886,6 +894,7 @@ window.__ModuleLoader__.load({
             applyValue(unit.parts[apply].node, unit.parts[apply].original, values[apply])
           }
         })
+        rememberTranslated(cacheKey(unit.masked))
         return true
       }
 
@@ -975,6 +984,7 @@ window.__ModuleLoader__.load({
             var restored = restoreText(hit, protectedText.slots)
             if (restored !== null) {
               failures.delete(key)
+              rememberTranslated(key)
               applyValueWithHeight(node, original, restored)
               continue
             }
@@ -1081,6 +1091,7 @@ window.__ModuleLoader__.load({
                 continue
               }
               failures.delete(entry.key)
+              rememberTranslated(entry.key)
               cache[entry.key] = translations[index]
               queueCache(entry.masked, translations[index], entry.nodes.length > 0 ? entry.nodes[0].node : null)
               for (var n = 0; n < entry.nodes.length; n += 1) {
@@ -1291,12 +1302,15 @@ window.__ModuleLoader__.load({
 
       /** Re-apply cached translations so a re-enabled switch shows them again. */
       function reapplyCached() {
+        if (translatedKeys.size === 0) return
         var nodes = collectNodes(document.body)
         var unitInfo = collectUnits(nodes, true)
         for (var u = 0; u < unitInfo.units.length; u += 1) {
           var unit = unitInfo.units[u]
-          var hit = cache[cacheKey(unit.masked)]
-          if (typeof hit === 'string') applyUnit(unit, hit)
+          var unitKey = cacheKey(unit.masked)
+          if (!translatedKeys.has(unitKey)) continue
+          var unitHit = cache[unitKey]
+          if (typeof unitHit === 'string') applyUnit(unit, unitHit)
         }
         for (var i = 0; i < nodes.length; i += 1) {
           var node = nodes[i]
@@ -1305,7 +1319,9 @@ window.__ModuleLoader__.load({
           var original = nodeText(node)
           var protectedText = protectText(original, glossary)
           if (protectedText === null) continue
-          var hit = cache[cacheKey(protectedText.masked)]
+          var key = cacheKey(protectedText.masked)
+          if (!translatedKeys.has(key)) continue
+          var hit = cache[key]
           if (typeof hit !== 'string') continue
           var restored = restoreText(hit, protectedText.slots)
           if (restored === null) continue

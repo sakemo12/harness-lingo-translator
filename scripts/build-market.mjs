@@ -380,7 +380,7 @@ function dshSuiteIssue() {
     '',
     `- **DSH 最低版本 / min DSH version**：\`${pkg.engines.dsh}\``,
     `- **Node**：\`${pkg.engines.node}\``,
-    '- **是否已在 DSH 上实测 / verified on DSH?**：未在干净 profile 上自动实测；仓库自带 161 个用例与 lint 门禁，',
+    '- **是否已在 DSH 上实测 / verified on DSH?**：未在干净 profile 上自动实测；仓库自带完整测试用例与 lint 门禁，',
     '  欢迎 CI 的兼容性日检给出结论。',
     '',
     '## 备注 / Notes',

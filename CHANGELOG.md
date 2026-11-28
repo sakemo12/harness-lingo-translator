@@ -17,6 +17,15 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Text that was already visible when the switch was first turned on is no longer
+  translated from a warm cache. `reapplyCached()` restores only segments
+  translated in this page session (`translatedKeys`), so the baseline wins on a
+  fresh start, while re-enabling still restores translated segments without new
+  requests. Regression tests cover plain text, inline-code paragraphs and the
+  selective re-enable case.
+
 ### Removed
 
 - The one-time marketplace scaffolding: `market/submissions/` (regenerated on

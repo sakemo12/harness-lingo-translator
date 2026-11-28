@@ -130,15 +130,19 @@ uses the host's own model credentials.
   from it when the new one is missing. Do not remove those fallbacks without a
   major-version migration plan.
 - **Re-enable and collapsed previews.** `start()` re-applies cached translations
-  (`reapplyCached`) so turning the switch back on restores previously translated
-  text without requests. Collapsed reasoning rows bypass the baseline for their
-  visible summary and display a translation truncated to `THINK_SUMMARY_MAX`
-  (160); the hidden body still waits for expansion.
-- **Passive triggers.** Enabling the switch snapshots the text already visible
-  and translates nothing from that snapshot; only blocks that finish generating,
-  text that changes afterwards, and collapsed content that is later revealed are
-  translated. Streaming (`data-streaming`, `aria-busy`) and hidden content are
-  skipped. Switching off restores every translated node.
+  (`reapplyCached`) only for segments translated in this page session
+  (`translatedKeys`), so turning the switch back on restores them without
+  requests. A fresh page must not replay a warm cache onto text that was already
+  visible when the switch was first turned on: the baseline wins on first start.
+  Collapsed reasoning rows bypass the baseline for their visible summary and
+  display a translation truncated to `THINK_SUMMARY_MAX` (160); the hidden body
+  still waits for expansion.
+- **Passive triggers.** On the first enable, the switch snapshots the text already
+  visible and translates nothing from that snapshot; only blocks that finish
+  generating, text that changes afterwards, and collapsed content that is later
+  revealed are translated. Re-enabling restores only the segments recorded in
+  `translatedKeys` (see above). Streaming (`data-streaming`, `aria-busy`) and
+  hidden content are skipped. Switching off restores every translated node.
 - **Masking targets code, not prose.** Product terms use lookarounds
   (`bundle`/`digit` must not match `bun`/`git`); a hyphenated word is an
   identifier only with a digit or the `dsh-` prefix; a slash sequence needs a

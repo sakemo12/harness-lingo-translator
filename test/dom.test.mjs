@@ -555,16 +555,50 @@ test('reports an unreachable service and stays off', async () => {
 })
 
 
-test('loads per-workspace cached translations before translating', async () => {
+test('does not replay host-cached translations onto text that was already visible', async () => {
   await withEngine('<p id="a">Existing cached text</p>', {
     getWorkspace: () => '/tmp/workspace',
     cacheEntries: { 'Existing cached text': '译 Existing cached text' },
   }, async (engine, api) => {
     await engine.start()
     await delay(120)
-    assert.equal(document.getElementById('a').textContent, '译 Existing cached text')
+    assert.equal(document.getElementById('a').textContent, 'Existing cached text')
     assert.equal(api.calls.cacheLoad, 1)
     assert.equal(api.calls.translate, 0)
+  })
+})
+
+test('does not replay a host-cached inline-code paragraph onto existing text', async () => {
+  await withEngine('<p id="u">The host <code>resolveConfig</code> validates input.</p>', {
+    getWorkspace: () => '/tmp/workspace',
+    cacheEntries: { 'The host ⟦0⟧ validates input.': '宿主 ⟦0⟧ 校验输入。' },
+  }, async (engine, api) => {
+    await engine.start()
+    await delay(120)
+    assert.equal(document.getElementById('u').textContent, 'The host resolveConfig validates input.')
+    assert.equal(api.calls.cacheLoad, 1)
+    assert.equal(api.calls.translate, 0)
+  })
+})
+
+test('re-enabling restores only segments translated in this page session', async () => {
+  await withEngine('<p id="a">Existing cached text</p>', {
+    getWorkspace: () => '/tmp/workspace',
+    cacheEntries: { 'Existing cached text': '译 Existing cached text' },
+  }, async (engine, api) => {
+    await engine.start()
+    const fresh = paragraph('Fresh translated text')
+    document.body.appendChild(fresh)
+    await waitFor(() => fresh.textContent === '译 Fresh translated text')
+    const count = api.calls.translate
+    assert.equal(document.getElementById('a').textContent, 'Existing cached text')
+    await engine.stop()
+    assert.equal(fresh.textContent, 'Fresh translated text')
+    await engine.start()
+    await delay(120)
+    assert.equal(document.getElementById('a').textContent, 'Existing cached text')
+    assert.equal(fresh.textContent, '译 Fresh translated text')
+    assert.equal(api.calls.translate, count)
   })
 })
 
@@ -582,14 +616,18 @@ test('saves successful translations into the workspace cache', async () => {
 })
 
 
-test('resolves the workspace from the host session header when the client catalog is unavailable', async () => {
+test('resolves the workspace from the host session header and uses its cache for new text', async () => {
   await withEngine('<div data-conversation-session="s1"><p id="a">Cached from host workspace</p></div>', {
     workspacePath: '/work/one',
     cacheEntries: { 'Cached from host workspace': '译 Cached from host workspace' },
   }, async (engine, api) => {
     await engine.start()
     await delay(120)
-    assert.equal(document.getElementById('a').textContent, '译 Cached from host workspace')
+    assert.equal(document.getElementById('a').textContent, 'Cached from host workspace')
+    const fresh = paragraph('Cached from host workspace')
+    document.body.appendChild(fresh)
+    await waitFor(() => fresh.textContent === '译 Cached from host workspace')
+    assert.equal(document.getElementById('a').textContent, 'Cached from host workspace')
     assert.equal(api.calls.cacheLoad, 1)
     assert.equal(api.calls.translate, 0)
   })
