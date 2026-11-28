@@ -520,6 +520,12 @@ window.__ModuleLoader__.load({
       // turned on. It stays in the original language; only new or newly
       // revealed text is translated.
       var baseline = new WeakMap()
+      // React may replace the whole message subtree when a reasoning row
+      // expands. Remember baseline strings per chat-flow key as well, so the
+      // already-visible parent layer is not treated as new content.
+      var baselineTexts = new Map()
+      // Nodes explicitly released from the baseline (collapsed thought previews).
+      var forceTranslatable = new WeakSet()
       // Per-segment request protection: a segment that keeps failing is retried
       // a bounded number of times (with backoff), never once per mutation.
       var failures = new Map()
@@ -920,7 +926,7 @@ window.__ModuleLoader__.load({
               var partNode = unit.parts[part].node
               var original = nodeText(partNode)
               if (displayed.get(partNode) === original || previewing.has(partNode)) { eligible = false; break }
-              if (baseline.get(partNode) === original) { eligible = false; break }
+              if (isBaselineText(partNode, original)) { eligible = false; break }
             }
             if (!eligible) continue
           }
@@ -972,7 +978,7 @@ window.__ModuleLoader__.load({
             }
             continue
           }
-          if (baseline.get(node) === original) continue
+          if (isBaselineText(node, original)) continue
           var protectedText = protectText(original, glossary)
           if (protectedText === null) continue
           var key = cacheKey(protectedText.masked)
@@ -1294,10 +1300,59 @@ window.__ModuleLoader__.load({
         pinnedHeights.clear()
       }
 
+      /** Stable baseline group: the chat-flow key, else the prose block. */
+      function baselineGroupOf(node) {
+        var element = node !== null && node !== undefined ? node.parentElement : null
+        if (element === null) return null
+        var flow = typeof element.closest === 'function' ? element.closest('[data-chat-flow-key]') : null
+        if (flow !== null) return 'flow:' + String(flow.getAttribute('data-chat-flow-key') || '')
+        return groupBlockOf(node) || element
+      }
+
+      function rememberBaselineText(node, text) {
+        var group = baselineGroupOf(node)
+        if (group === null) return
+        var texts = baselineTexts.get(group)
+        if (texts === undefined) {
+          texts = new Set()
+          baselineTexts.set(group, texts)
+        }
+        texts.add(text)
+      }
+
+      function forgetBaselineText(node) {
+        var group = baselineGroupOf(node)
+        if (group === null) return
+        var texts = baselineTexts.get(group)
+        if (texts !== undefined) texts.delete(nodeText(node))
+      }
+
+      /**
+       * Baseline by node identity, or by identical text inside the same chat
+       * flow after React replaced the original node. A forced node (collapsed
+       * thought preview) is never baseline.
+       */
+      function isBaselineText(node, original) {
+        if (forceTranslatable.has(node)) return false
+        if (baseline.get(node) === original) return true
+        var group = baselineGroupOf(node)
+        if (group === null) return false
+        var texts = baselineTexts.get(group)
+        if (texts === undefined || !texts.has(original)) return false
+        baseline.set(node, original)
+        return true
+      }
+
       function markBaseline() {
         baseline = new WeakMap()
+        baselineTexts = new Map()
+        forceTranslatable = new WeakSet()
         var nodes = collectNodes(document.body)
-        for (var i = 0; i < nodes.length; i += 1) baseline.set(nodes[i], nodeText(nodes[i]))
+        for (var i = 0; i < nodes.length; i += 1) {
+          var text = nodeText(nodes[i])
+          baseline.set(nodes[i], text)
+          rememberBaselineText(nodes[i], text)
+        }
       }
 
       /** Re-apply cached translations so a re-enabled switch shows them again. */
@@ -1337,7 +1392,10 @@ window.__ModuleLoader__.load({
       function releaseThinkSummaries() {
         var nodes = collectNodes(document.body)
         for (var i = 0; i < nodes.length; i += 1) {
-          if (collapsedThinkRow(nodes[i]) !== null) baseline.delete(nodes[i])
+          if (collapsedThinkRow(nodes[i]) === null) continue
+          baseline.delete(nodes[i])
+          forceTranslatable.add(nodes[i])
+          forgetBaselineText(nodes[i])
         }
       }
 
@@ -1466,7 +1524,7 @@ window.__ModuleLoader__.load({
       zh: {
         idle: '自动翻译：关',
         on: '自动翻译：开',
-        working: '翻译中…',
+        working: '翻译中…（点击关闭）',
         title: '开启后，新生成的内容在该语块生成完成后自动翻译；折叠的内容不翻译，展开时才翻译；开启前已显示的内容保持原文',
         'settings.summary': '本地服务或系统模型的翻译设置',
         'settings.tab.connection': '连接',
@@ -1520,11 +1578,25 @@ window.__ModuleLoader__.load({
         'settings.loading': '正在读取配置…',
         'settings.unavailable': '当前部署没有为本插件提供可修改的配置表单，请改 profile 的 cordis.patch.yml。',
         'settings.notWritable': '当前 profile 不接受配置写入。',
+        'error.cannotReach': '无法连接翻译服务：{detail}',
+        'error.unavailable': '本地翻译服务不可用。',
+        'error.noLlm': '当前部署没有挂载 llm 服务。',
+        'error.noRoute': '没有可用的模型路由：请先在会话里发一条消息。',
+        'error.noTargetLanguage': '目标语言为空：请在插件配置里设置 targetLang。',
+        'error.emptyEndpoint': '翻译服务没有返回内容。',
+        'error.notJson': '翻译服务返回的不是有效 JSON。',
+        'error.emptyTranslation': '翻译结果为空，已保留原文。',
+        'error.placeholder': '译文丢失、重复或新增了占位符，已保留原文。',
+        'error.timeout': '翻译请求超时。',
+        'error.cancelled': '翻译已取消。',
+        'error.http': '翻译服务返回错误：{detail}',
+        'error.generic': '翻译失败：{detail}',
+        'stopWhileWorking': '翻译中…点击可关闭自动翻译',
       },
       en: {
         idle: 'Auto-translate: off',
         on: 'Auto-translate: on',
-        working: 'Translating…',
+        working: 'Translating… (click to turn off)',
         title: 'When on, new text is translated after its block finishes generating; collapsed text stays original until expanded; content already shown when enabled stays original',
         'settings.summary': 'Local endpoint or system-model translation settings',
         'settings.tab.connection': 'Connection',
@@ -1578,33 +1650,83 @@ window.__ModuleLoader__.load({
         'settings.loading': 'Reading configuration…',
         'settings.unavailable': 'This deployment offers no editable form for this plugin; edit cordis.patch.yml in the profile instead.',
         'settings.notWritable': 'This profile does not accept configuration writes.',
+        'error.cannotReach': 'Cannot reach the translation service: {detail}',
+        'error.unavailable': 'The local translation service is unavailable.',
+        'error.noLlm': 'The llm service is not mounted in this profile.',
+        'error.noRoute': 'No model route: send one message first so the session records a request route.',
+        'error.noTargetLanguage': 'Target language is empty: set targetLang in the plugin config.',
+        'error.emptyEndpoint': 'The translation service returned no content.',
+        'error.notJson': 'The translation service did not return valid JSON.',
+        'error.emptyTranslation': 'The translation was empty; the original text was kept.',
+        'error.placeholder': 'The translation lost, duplicated or invented a placeholder; the original text was kept.',
+        'error.timeout': 'The translation request timed out.',
+        'error.cancelled': 'Translation was cancelled.',
+        'error.http': 'The translation service returned an error: {detail}',
+        'error.generic': 'Translation failed: {detail}',
+        'stopWhileWorking': 'Translating… click to turn off auto-translation',
       },
+    }
+
+    /**
+     * Translate the known host/engine errors into the active locale. Unknown
+     * errors keep their detail after a localized prefix; the technical detail
+     * is still useful for the report and never contains the apiKey.
+     */
+    function localizeError(message, t) {
+      var text = typeof message === 'string' ? message.trim() : ''
+      if (text === '') return ''
+      var lower = text.toLowerCase()
+      if (lower.indexOf('cannot reach') === 0) {
+        var detail = text.slice('cannot reach'.length)
+          .replace(/^[:\s—–-]+/u, '')
+          .replace(/\s*[—–-]\s*is the local translation server running\?+\s*$/iu, '')
+          .trim()
+        return t('error.cannotReach').replace('{detail}', detail)
+      }
+      if (lower.indexOf('the local translation endpoint is unavailable') !== -1 || lower.indexOf('the local translation service is unavailable') !== -1) return t('error.unavailable')
+      if (lower.indexOf('the llm service is not mounted') !== -1) return t('error.noLlm')
+      if (lower.indexOf('no model route') !== -1) return t('error.noRoute')
+      if (lower.indexOf('no target language') !== -1 || lower.indexOf('target language is empty') !== -1) return t('error.noTargetLanguage')
+      if (lower.indexOf('the endpoint returned no message content') !== -1) return t('error.emptyEndpoint')
+      if (lower.indexOf('the endpoint answered with something that is not json') !== -1) return t('error.notJson')
+      if (lower.indexOf('the translation is empty') !== -1) return t('error.emptyTranslation')
+      if (lower.indexOf('placeholder') !== -1) return t('error.placeholder')
+      if (lower.indexOf('timed out') !== -1 || lower.indexOf('timeout') !== -1) return t('error.timeout')
+      if (lower.indexOf('cancelled') !== -1 || lower.indexOf('canceled') !== -1) return t('error.cancelled')
+      if (/^http\s+\d{3}/iu.test(text)) return t('error.http').replace('{detail}', text)
+      return t('error.generic').replace('{detail}', text)
     }
 
     function createUi(t, engine) {
       var host = document.createElement('div')
       host.setAttribute('data-harness-lingo-translator-ui', '')
       host.setAttribute('translate', 'no')
-      host.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483000;display:flex;gap:6px;align-items:center;font:12px/1.4 system-ui,sans-serif'
+      host.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;font:12px/1.4 system-ui,sans-serif'
+      var errorBadge = document.createElement('span')
+      errorBadge.setAttribute('role', 'status')
+      errorBadge.setAttribute('aria-live', 'polite')
+      errorBadge.style.cssText = 'max-width:320px;color:#ffb4a8;font-size:11px;line-height:1.4;text-align:right;overflow-wrap:anywhere;white-space:normal;background:rgba(30,30,30,.82);padding:6px 8px;border-radius:8px'
+      host.appendChild(errorBadge)
       var button = document.createElement('button')
       button.type = 'button'
       button.style.cssText = 'cursor:pointer;border:1px solid rgba(125,125,125,.45);border-radius:999px;padding:7px 12px;background:rgba(30,30,30,.82);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25)'
       host.appendChild(button)
-      var errorBadge = document.createElement('span')
-      errorBadge.style.cssText = 'max-width:280px;color:#ffb4a8;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
-      host.appendChild(errorBadge)
       document.body.appendChild(host)
 
       function render(state) {
+        var message = state.error ? localizeError(state.error, t) : ''
         if (state.working) button.textContent = t('working')
         else if (state.enabled) button.textContent = t('on')
         else button.textContent = t('idle')
-        button.title = state.error || t('title')
-        errorBadge.textContent = state.error || ''
-        errorBadge.style.display = state.error ? 'inline' : 'none'
+        button.title = message || (state.working ? t('stopWhileWorking') : t('title'))
+        errorBadge.textContent = message
+        errorBadge.style.display = message ? 'block' : 'none'
         button.setAttribute('aria-pressed', state.enabled ? 'true' : 'false')
-        button.disabled = state.working
-        button.style.opacity = state.working ? '0.7' : '1'
+        button.setAttribute('aria-label', state.working ? t('stopWhileWorking') : state.enabled ? t('on') : t('idle'))
+        // The switch stays clickable while a translation is in flight; clicking
+        // it stops the run, restores the originals and cancels the generation.
+        button.disabled = false
+        button.style.opacity = '1'
       }
 
       button.addEventListener('click', function () { engine.toggle() })
@@ -2063,6 +2185,8 @@ window.__ModuleLoader__.load({
       DICTS: DICTS,
       collectNodes: collectNodes,
       ConfigPanel: ConfigPanel,
+      createUi: createUi,
+      localizeError: localizeError,
       diffConfigDraft: diffConfigDraft,
       commitConfig: commitConfig,
       SETTINGS_SLOT_KEY: SETTINGS_SLOT_KEY,

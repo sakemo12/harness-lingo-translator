@@ -522,6 +522,32 @@ test('keeps the collapsed reasoning summary translated when the row expands', as
   })
 })
 
+test('keeps a re-rendered parent original while the newly revealed reasoning body translates', async () => {
+  await withEngine([
+    '<div data-chat-flow-key="m1">',
+    '  <p id="parent">Parent message above thinking.</p>',
+    '  <div data-variant="think" id="think">',
+    '    <div><span>思考</span><span>Summary line visible.</span></div>',
+    '    <div id="body"></div>',
+    '  </div>',
+    '</div>',
+  ].join('\n'), {}, async (engine) => {
+    await engine.start()
+    await delay(500)
+    const parent = document.getElementById('parent')
+    const row = document.getElementById('think')
+    const body = document.getElementById('body')
+    // Expanding the row makes React replace the parent text node and add the
+    // body. The parent text is baseline; the body text is newly revealed.
+    parent.textContent = 'Parent message above thinking.'
+    const reasoning = paragraph('Reasoning body text here.')
+    body.appendChild(reasoning)
+    row.setAttribute('data-expanded', '')
+    await waitFor(() => reasoning.textContent === '译 Reasoning body text here.')
+    assert.equal(parent.textContent, 'Parent message above thinking.')
+  })
+})
+
 test('restores originals when the switch is turned off', async () => {
   await withEngine('', {}, async (engine) => {
     await engine.start()

@@ -105,10 +105,16 @@ uses the host's own model credentials.
   content-box `min-height`. Previewing the original on hover keeps the pinned
   height. Never pin `body`/`html`, save and restore the page's own inline
   `min-height` on stop, and only pin height (never width).
-- **Controlled re-renders.** React writes the original text back into nodes it
-  controls when a row expands or re-renders. `collectPending` must re-apply the
-  stored `displayed` value when the current text equals `originals.get(node)`
-  (before the baseline check) — never issue a request for this case.
+- **Controlled re-renders and baseline text.** React writes the original text
+  back into nodes it controls when a row expands or re-renders. `collectPending`
+  must re-apply the stored `displayed` value when the current text equals
+  `originals.get(node)` (before the baseline check) — never issue a request for
+  this case. Expanding a reasoning row can also replace the parent message's
+  text nodes; baseline is therefore remembered per `[data-chat-flow-key]` +
+  text (`baselineTexts`), and a new node whose text matches a baseline string in
+  the same flow counts as baseline. The newly revealed reasoning body has no
+  baseline entry and still translates. Collapsed thought previews are
+  `forceTranslatable` and bypass both checks.
 - **Per-workspace cache document.** The only host file write is
   `~/.dsh/cache/harness-lingo-translator/<sha256(workspace)>.json` (never inside the
   workspace). Entries are content-addressed by `configHash + "\0" + masked
@@ -162,6 +168,11 @@ uses the host's own model credentials.
   untestable.
 - **Fail closed.** A translation that drops, renumbers or invents a `⟦n⟧`
   placeholder, or that is empty/truncated, keeps the original text.
+- **Live switch and localized errors.** The floating switch must not be disabled
+  while `state.working`; clicking it calls `stop()` (generation bump, restore and
+  cache flush). Error text goes through `localizeError` into the active locale
+  and is rendered above the button; an unknown raw detail may follow a localized
+  prefix, but an error must never contain `apiKey`.
 - **No secrets in logs or status.** `apiKey` is an optional volatile
   `role('secret')` field: the settings form only writes it, the settings service
   strips it from every read, and it is only sent as a bearer header. It never

@@ -25,6 +25,14 @@
   fresh start, while re-enabling still restores translated segments without new
   requests. Regression tests cover plain text, inline-code paragraphs and the
   selective re-enable case.
+- Expanding a reasoning row no longer translates the already-visible parent
+  layer. Baseline is also remembered per `[data-chat-flow-key]` + text, so a
+  React re-render that replaces the parent subtree is treated as baseline while
+  the newly revealed reasoning body still translates.
+- The floating switch is no longer disabled while translating; clicking it stops
+  the run and restores the originals. Error messages are localized (Chinese in a
+  Chinese UI), shown above the button instead of beside it, and unknown details
+  keep a localized prefix.
 
 ### Removed
 
