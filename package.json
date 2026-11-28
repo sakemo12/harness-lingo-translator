@@ -1,6 +1,6 @@
 {
   "name": "harness-lingo-translator",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "description": "Harness Lingo Translator: chat-flow translation for DeepSeek Harness backed by a local OpenAI-compatible HY-MT translation model. Translate the conversation flow into your language while preserving code, paths, commands, identifiers, numbers and product names. Display-only; the session log is never touched.",
   "keywords": [
     "dsh",

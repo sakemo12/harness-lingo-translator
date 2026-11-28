@@ -17,10 +17,13 @@
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-11-28
+
 ### Changed
 
-- The 关键词保留 hint now notes that the default mode is already highly
-  accurate and that enabling keyword retention may actually introduce errors.
+- The 关键词保留 / “Keyword retention” hint now notes that the default mode is
+  already highly accurate and that enabling keyword retention may actually
+  introduce errors. Copy only; no runtime change.
 
 ## [1.15.0] - 2026-11-28
 
