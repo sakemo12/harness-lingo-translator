@@ -24,7 +24,7 @@ test('a cache write that throws keeps the entries for the next flush', async () 
   const dir = await mkdtemp(join(tmpdir(), 'harness-lingo-translator-cache-write-'))
   const cache = new WorkspaceCache({ dir })
   const dom = new JSDOM(
-    '<!doctype html><html><body><div data-conversation-session="s1"><p>Already here</p><div id="flow"></div></div></body></html>',
+    '<!doctype html><html><body><div data-conversation-session="s1"><div class="EvIC1a_column" data-chat-flow><p>Already here</p><div id="flow"></div></div></div></body></html>',
     { url: 'https://example.test/' },
   )
   globalThis.window = dom.window

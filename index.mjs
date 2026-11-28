@@ -25,7 +25,7 @@ const PROMPT_TEMPLATE_IDS = Object.freeze([...PROMPT_STYLES])
 /** Every field of the resolved config, in schema order. */
 const CONFIG_KEYS = Object.freeze([
   'enabled', 'baseUrl', 'apiKey', 'model', 'targetLang', 'promptTemplate', 'customTemplate',
-  'promptHeader', 'placeholderGuard', 'placeholderHint', 'systemModel', 'hoverRestore', 'hoverRestoreMs',
+  'promptHeader', 'placeholderGuard', 'placeholderFormat', 'placeholderHint', 'systemModel', 'hoverRestore', 'hoverRestoreMs',
   'glossary', 'temperature', 'topP', 'topK', 'repetitionPenalty', 'maxTokens', 'concurrency',
   'batchReasoning', 'timeoutMs', 'retries',
 ])
@@ -52,7 +52,9 @@ export const Config = z.object({
   /** Optional extra instruction prepended to every prompt; volatile for live edits. */
   promptHeader: z.string().default('将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释').max(2000).volatile().description('翻译提示词头：作为每次翻译的指令句，支持 {target_language}、{target_lang}；留空使用内置模板。'),
   /** Whether a segment carrying placeholders gets the retention clause. */
-  placeholderGuard: z.boolean().default(true).volatile().description('含 ⟦n⟧ 的请求是否附加“占位符原样保留”的要求。'),
+  placeholderGuard: z.boolean().default(true).volatile().description('是否遮罩关键词并附加“占位符原样保留”要求；关闭后请求只发送纯文本。'),
+  /** Mask template; the first `n` is replaced by the slot number. */
+  placeholderFormat: z.string().default('[n]').max(24).volatile().description('遮罩格式，用 n 代表编号，例如 [n]、{{n}}、⟦n⟧；默认 [n]。'),
   /** Custom retention sentence; empty uses the built-in clause. */
   placeholderHint: z.string().default('').max(500).volatile().description('自定义占位符要求句子；留空使用内置句子。'),
   /** Use the host's session model route (host integration) instead of the local endpoint. */
@@ -115,6 +117,13 @@ export function resolveConfig(raw) {
   if (promptHeader.length > 2000) fail('config.promptHeader must be at most 2000 characters')
   const placeholderGuard = value.placeholderGuard ?? true
   if (typeof placeholderGuard !== 'boolean') fail('config.placeholderGuard must be a boolean')
+  const placeholderFormat = String(value.placeholderFormat ?? '[n]').trim()
+  if (placeholderFormat.length === 0 || placeholderFormat.length > 24) {
+    fail('config.placeholderFormat must be 1 to 24 characters')
+  }
+  if (!placeholderFormat.includes('n') || placeholderFormat.replace(/n/gu, '').length === 0) {
+    fail('config.placeholderFormat must contain n and at least one literal character, e.g. [n]')
+  }
   const placeholderHint = value.placeholderHint ?? ''
   if (typeof placeholderHint !== 'string') fail('config.placeholderHint must be a string')
   if (placeholderHint.length > 500) fail('config.placeholderHint must be at most 500 characters')
@@ -164,6 +173,7 @@ export function resolveConfig(raw) {
     customTemplate,
     promptHeader,
     placeholderGuard,
+    placeholderFormat,
     placeholderHint,
     systemModel,
     hoverRestore,

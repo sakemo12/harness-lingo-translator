@@ -6,7 +6,7 @@
 // Hand-written client bundle (no build step), same loader shape as
 // dsh-checkpoint-rewind. It walks the rendered DOM, masks everything that must
 // stay verbatim (code, paths, commands, identifiers, numbers, product names)
-// into ⟦n⟧ placeholders, asks the host `translatePage` Remote to translate the
+// into placeholder tokens (default `[n]`), asks the host `translatePage` Remote to translate the
 // prose, restores the placeholders and writes the result back into the same
 // text nodes. A floating control switches between the translation and the
 // original; the originals stay in memory, the session log is never touched.
@@ -59,6 +59,8 @@ window.__ModuleLoader__.load({
         if (typeof v.glossary[i] !== 'string') throw new Error('status.glossary[' + i + ']')
       }
       if (v.batchReasoning !== undefined && typeof v.batchReasoning !== 'boolean') throw new Error('status.batchReasoning')
+      if (v.placeholderGuard !== undefined && typeof v.placeholderGuard !== 'boolean') throw new Error('status.placeholderGuard')
+      if (v.placeholderFormat !== undefined && (typeof v.placeholderFormat !== 'string' || v.placeholderFormat.length > 24)) throw new Error('status.placeholderFormat')
       if (v.hoverRestore !== undefined && typeof v.hoverRestore !== 'boolean') throw new Error('status.hoverRestore')
       if (v.hoverRestoreMs !== undefined && !Number.isInteger(v.hoverRestoreMs)) throw new Error('status.hoverRestoreMs')
       if (typeof v.configHash !== 'string') throw new Error('status.configHash')
@@ -233,8 +235,30 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
     // Protection: everything that must survive translation verbatim.
     // ---------------------------------------------------------------------
-    var PLACEHOLDER = /⟦(\d+)⟧/g
+    var DEFAULT_PLACEHOLDER_FORMAT = '[n]'
     var HAS_LETTERS = /[A-Za-z]/
+
+    /** Canonicalise a mask template; `n` is the slot number. */
+    function normalizePlaceholderFormat(format) {
+      var text = typeof format === 'string' ? format.trim() : ''
+      if (text.length === 0 || text.length > 24) return DEFAULT_PLACEHOLDER_FORMAT
+      if (text.indexOf('n') === -1 || text.replace(/n/g, '').length === 0) return DEFAULT_PLACEHOLDER_FORMAT
+      return text
+    }
+
+    /** One token such as `[0]` (default) or `⟦0⟧`. */
+    function placeholderToken(format, index) {
+      var resolved = normalizePlaceholderFormat(format)
+      var at = resolved.indexOf('n')
+      return resolved.slice(0, at) + String(index) + resolved.slice(at + 1)
+    }
+
+    /** Regex for the configured token format; the number is group 1. */
+    function placeholderRegExp(format, flags) {
+      var resolved = normalizePlaceholderFormat(format)
+      var at = resolved.indexOf('n')
+      return new RegExp(escapeRegExp(resolved.slice(0, at)) + '(\\d+)' + escapeRegExp(resolved.slice(at + 1)), flags || 'g')
+    }
 
     // Product names are ordinary words to a model, so they are matched as literal
     // alternatives before the generic rules.
@@ -255,6 +279,9 @@ window.__ModuleLoader__.load({
       '(?:\\.{1,2}\\/[\\w.@-]+(?:\\/[\\w.@-]+)*)',
       '@[a-z0-9][\\w.-]*\\/[\\w.-]+',
       '\\bdsh-[a-z0-9][a-z0-9-]*\\b',
+      // A relative path with a known extension is one token. Masking only its
+      // basename leaves `client/⟦0⟧`, which HY-MT then drops or rewrites.
+      '\\b(?:[\\w.@-]+\\/)+[\\w.@-]+\\.(?:mjs|js|ts|tsx|jsx|json|md|ya?ml|toml|lock|log|txt|png|jpe?g|gif|webp|svg|pdf|docx?|xlsx?|csv|zip|tgz|tar|gz|sh|ps1|bat|exe)\\b',
       '\\b[\\w.-]+\\.(?:mjs|js|ts|tsx|jsx|json|md|ya?ml|toml|lock|log|txt|png|jpe?g|gif|webp|svg|pdf|docx?|xlsx?|csv|zip|tgz|tar|gz|sh|ps1|bat|exe)\\b',
       // A hyphenated/dotted all-caps name such as HY-MT1.5-1.8B-GGUF is one
       // product token; masking its pieces separately created four placeholders.
@@ -312,7 +339,7 @@ window.__ModuleLoader__.load({
     /**
      * Mask protected spans. Returns null when the text has no translatable prose.
      */
-    function protectText(text, glossary) {
+    function protectText(text, glossary, format) {
       if (typeof text !== 'string' || text.length === 0) return null
       var regex = buildProtectRegex(glossary)
       var slots = []
@@ -321,7 +348,7 @@ window.__ModuleLoader__.load({
       var match
       while ((match = regex.exec(text)) !== null) {
         if (match[0].length === 0) { regex.lastIndex += 1; continue }
-        masked += text.slice(last, match.index) + '⟦' + slots.length + '⟧'
+        masked += text.slice(last, match.index) + placeholderToken(format, slots.length)
         slots.push(match[0])
         last = match.index + match[0].length
       }
@@ -332,15 +359,16 @@ window.__ModuleLoader__.load({
     }
 
     /** Put the protected spans back. Returns null when the model altered a token. */
-    function restoreText(text, slots) {
+    function restoreText(text, slots, format) {
       if (typeof text !== 'string') return null
       var expected = []
-      for (var i = 0; i < slots.length; i += 1) expected.push('⟦' + i + '⟧')
+      for (var i = 0; i < slots.length; i += 1) expected.push(placeholderToken(format, i))
       expected.sort()
-      var actual = (text.match(PLACEHOLDER) || []).slice().sort()
+      var pattern = placeholderRegExp(format, 'g')
+      var actual = (text.match(pattern) || []).slice().sort()
       if (actual.length !== expected.length) return null
       for (var j = 0; j < expected.length; j += 1) if (actual[j] !== expected[j]) return null
-      return text.replace(PLACEHOLDER, function (token, index) {
+      return text.replace(pattern, function (token, index) {
         var slot = slots[Number(index)]
         return slot === undefined ? token : slot
       })
@@ -402,6 +430,13 @@ window.__ModuleLoader__.load({
     // Streaming blocks and busy containers keep their text out of translation
     // until the Host marks them done (`data-streaming` disappears).
     var STREAMING_SELECTOR = '[data-streaming], [aria-busy="true"]'
+
+    // The translator is strictly scoped to the conversation flow column. The
+    // chat view renders its messages into `<div class="EvIC1a_column"
+    // data-chat-flow>`; the sidebar, settings page, file viewer, composer and
+    // this plugin's own control are outside it and must never be walked. The
+    // selector is deliberately exact: translating anything else is a bug.
+    var FLOW_SELECTOR = '.EvIC1a_column[data-chat-flow]'
 
     function nodeText(node) {
       var value = node && node.nodeValue
@@ -485,6 +520,32 @@ window.__ModuleLoader__.load({
       return nodes
     }
 
+    /** The conversation flow columns currently rendered on the page. */
+    function flowRoots() {
+      if (typeof document === 'undefined') return []
+      return Array.prototype.slice.call(document.querySelectorAll(FLOW_SELECTOR))
+    }
+
+    /**
+     * Eligible text nodes inside the conversation flow, never elsewhere. When
+     * the chat view is not rendered (no conversation open) this is empty, so
+     * the sidebar, settings page and file viewer are left alone.
+     */
+    function collectFlowNodes() {
+      var roots = flowRoots()
+      var seen = new Set()
+      var nodes = []
+      for (var root = 0; root < roots.length; root += 1) {
+        var found = collectNodes(roots[root])
+        for (var index = 0; index < found.length; index += 1) {
+          if (seen.has(found[index])) continue
+          seen.add(found[index])
+          nodes.push(found[index])
+        }
+      }
+      return nodes
+    }
+
     function splitWhitespace(text) {
       var lead = (text.match(/^\s*/) || [''])[0]
       var trail = (text.match(/\s*$/) || [''])[0]
@@ -501,6 +562,11 @@ window.__ModuleLoader__.load({
       var glossary = Array.isArray(options.glossary) ? options.glossary.slice() : []
       var targetLang = options.targetLang || ''
       var batchReasoning = false
+      // When the user turns keyword retention off, the source is sent as plain
+      // text: no masks, no inline-code unit assembly and no guard clause.
+      var placeholderGuard = true
+      // Token template from status(); `n` is the slot number, default `[n]`.
+      var placeholderFormat = DEFAULT_PLACEHOLDER_FORMAT
       var hoverRestore = true
       var hoverRestoreMs = 200
       var previewing = new Set()
@@ -549,6 +615,31 @@ window.__ModuleLoader__.load({
       // must stay verbatim are masked by this half too.
       function setGlossary(terms) {
         glossary = Array.isArray(terms) ? terms.slice() : []
+      }
+
+      /**
+       * Mask one text node. With keyword retention disabled the original text
+       * is returned verbatim with no slots, so the request body stays plain
+       * text (no mask tokens and no inline-code placeholders).
+       */
+      function protect(text) {
+        if (!placeholderGuard) {
+          if (typeof text !== 'string' || text.length === 0) return null
+          if (text.trim().length < 2) return null
+          if (!HAS_LETTERS.test(text)) return null
+          return { masked: text, slots: [] }
+        }
+        return protectText(text, glossary, placeholderFormat)
+      }
+
+      /**
+       * Restore placeholders. With masking off there are no structural
+       * placeholders: any mask-like token in the source was ordinary prose,
+       * so the translation is accepted as-is instead of being rejected.
+       */
+      function restoreTranslation(text, slots) {
+        if (!placeholderGuard) return typeof text === 'string' ? text : null
+        return restoreText(text, slots, placeholderFormat)
       }
 
       function cacheKey(masked) {
@@ -788,10 +879,10 @@ window.__ModuleLoader__.load({
         })
       }
 
-      function offsetPlaceholders(masked, offset) {
+      function offsetPlaceholders(masked, offset, format) {
         if (offset === 0) return masked
-        return masked.replace(/⟦(\d+)⟧/g, function (token, index) {
-          return '⟦' + (Number(index) + offset) + '⟧'
+        return masked.replace(placeholderRegExp(format, 'g'), function (token, index) {
+          return placeholderToken(format, Number(index) + offset)
         })
       }
 
@@ -801,6 +892,9 @@ window.__ModuleLoader__.load({
        * when the block has no inline code or any part is not translatable.
        */
       function buildUnit(block) {
+        // Without placeholders there is no way to split the prose back around
+        // inline code; the paragraph's text nodes are translated separately.
+        if (!placeholderGuard) return null
         var items = []
         var cache = new Map()
         var rejected = false
@@ -809,7 +903,7 @@ window.__ModuleLoader__.load({
           if (node.nodeType === 3) {
             if (node.nodeValue.trim().length === 0) return
             if (!isEligible(node, cache)) { rejected = true; return }
-            var protectedText = protectText(node.nodeValue, glossary)
+            var protectedText = protect(node.nodeValue)
             if (protectedText === null) { rejected = true; return }
             items.push({ kind: 'text', node: node, original: node.nodeValue, masked: protectedText.masked, slots: protectedText.slots })
             return
@@ -832,12 +926,12 @@ window.__ModuleLoader__.load({
         for (var index = 0; index < items.length; index += 1) {
           var item = items[index]
           if (item.kind === 'text') {
-            combined += offsetPlaceholders(item.masked, slots.length)
+            combined += offsetPlaceholders(item.masked, slots.length, placeholderFormat)
             parts.push({ node: item.node, original: item.original, slotStart: slots.length, slotCount: item.slots.length })
             for (var slot = 0; slot < item.slots.length; slot += 1) slots.push(item.slots[slot])
           } else {
             codes.push(slots.length)
-            combined += '⟦' + slots.length + '⟧'
+            combined += placeholderToken(placeholderFormat, slots.length)
             slots.push(item.text)
           }
         }
@@ -846,11 +940,11 @@ window.__ModuleLoader__.load({
       }
 
       /** Split a unit translation at the inline-code placeholders (order checked). */
-      function splitUnitTranslation(translated, codeIndices) {
+      function splitUnitTranslation(translated, codeIndices, format) {
         var fragments = []
         var last = 0
         var seen = 0
-        var pattern = /⟦(\d+)⟧/g
+        var pattern = placeholderRegExp(format, 'g')
         var match
         while ((match = pattern.exec(translated)) !== null) {
           var index = Number(match[1])
@@ -866,15 +960,16 @@ window.__ModuleLoader__.load({
       }
 
       /** Restore one part's own placeholders (inline-code placeholders were split out). */
-      function restorePart(text, slots, slotStart, slotCount) {
+      function restorePart(text, slots, slotStart, slotCount, format) {
         if (typeof text !== 'string') return null
         var expected = []
-        for (var index = 0; index < slotCount; index += 1) expected.push('⟦' + (slotStart + index) + '⟧')
+        for (var index = 0; index < slotCount; index += 1) expected.push(placeholderToken(format, slotStart + index))
         expected.sort()
-        var actual = (text.match(PLACEHOLDER) || []).slice().sort()
+        var pattern = placeholderRegExp(format, 'g')
+        var actual = (text.match(pattern) || []).slice().sort()
         if (actual.length !== expected.length) return null
         for (var check = 0; check < expected.length; check += 1) if (actual[check] !== expected[check]) return null
-        return text.replace(PLACEHOLDER, function (token, index) {
+        return text.replace(pattern, function (token, index) {
           var slot = slots[Number(index)]
           return slot === undefined ? token : slot
         })
@@ -883,13 +978,13 @@ window.__ModuleLoader__.load({
       /** Apply one translated unit to its prose text nodes. */
       function applyUnit(unit, translated) {
         if (unit.parts.length === 0) return false
-        var fragments = splitUnitTranslation(translated, unit.codeIndices)
+        var fragments = splitUnitTranslation(translated, unit.codeIndices, placeholderFormat)
         if (fragments === null || fragments.length !== unit.parts.length) return false
         var values = []
         for (var index = 0; index < unit.parts.length; index += 1) {
           var part = unit.parts[index]
           if (!part.node.isConnected || nodeText(part.node) !== part.original) return false
-          var restored = restorePart(fragments[index], unit.slots, part.slotStart, part.slotCount)
+          var restored = restorePart(fragments[index], unit.slots, part.slotStart, part.slotCount, placeholderFormat)
           if (restored === null || (part.original.trim().length > 0 && restored.trim().length === 0)) return false
           values.push(restored)
         }
@@ -938,7 +1033,7 @@ window.__ModuleLoader__.load({
         var pending = []
         var byKey = new Map()
         var now = Date.now()
-        var nodes = collectNodes(document.body)
+        var nodes = collectFlowNodes()
         var unitInfo = collectUnits(nodes)
         var grouped = unitInfo.grouped
         for (var u = 0; u < unitInfo.units.length; u += 1) {
@@ -977,7 +1072,7 @@ window.__ModuleLoader__.load({
             continue
           }
           if (isBaselineText(node, original)) continue
-          var protectedText = protectText(original, glossary)
+          var protectedText = protect(original)
           if (protectedText === null) continue
           var key = cacheKey(protectedText.masked)
           if (inFlight.has(key)) continue
@@ -985,7 +1080,7 @@ window.__ModuleLoader__.load({
           if (failure !== undefined && (failure.count >= FAILURE_LIMIT || failure.nextAt > now)) continue
           var hit = cache[key]
           if (typeof hit === 'string') {
-            var restored = restoreText(hit, protectedText.slots)
+            var restored = restoreTranslation(hit, protectedText.slots)
             if (restored !== null) {
               failures.delete(key)
               rememberTranslated(key)
@@ -1089,7 +1184,7 @@ window.__ModuleLoader__.load({
                 queueCache(entry.masked, translations[index], entry.unit.parts.length > 0 ? entry.unit.parts[0].node : null)
                 continue
               }
-              var restored = failed.has(index) ? null : restoreText(translations[index], entry.slots)
+              var restored = failed.has(index) ? null : restoreTranslation(translations[index], entry.slots)
               if (restored === null) {
                 rememberFailure(entry.key)
                 continue
@@ -1335,7 +1430,7 @@ window.__ModuleLoader__.load({
       function markBaseline() {
         baseline = new WeakMap()
         baselineTexts = new Map()
-        var nodes = collectNodes(document.body)
+        var nodes = collectFlowNodes()
         for (var i = 0; i < nodes.length; i += 1) {
           var text = nodeText(nodes[i])
           baseline.set(nodes[i], text)
@@ -1346,7 +1441,7 @@ window.__ModuleLoader__.load({
       /** Re-apply cached translations so a re-enabled switch shows them again. */
       function reapplyCached() {
         if (translatedKeys.size === 0) return
-        var nodes = collectNodes(document.body)
+        var nodes = collectFlowNodes()
         var unitInfo = collectUnits(nodes, true)
         for (var u = 0; u < unitInfo.units.length; u += 1) {
           var unit = unitInfo.units[u]
@@ -1360,13 +1455,13 @@ window.__ModuleLoader__.load({
           if (unitInfo.grouped.has(node)) continue
           if (displayed.has(node)) continue
           var original = nodeText(node)
-          var protectedText = protectText(original, glossary)
+          var protectedText = protect(original)
           if (protectedText === null) continue
           var key = cacheKey(protectedText.masked)
           if (!translatedKeys.has(key)) continue
           var hit = cache[key]
           if (typeof hit !== 'string') continue
-          var restored = restoreText(hit, protectedText.slots)
+          var restored = restoreTranslation(hit, protectedText.slots)
           if (restored === null) continue
           applyValueWithHeight(node, original, restored)
         }
@@ -1405,6 +1500,8 @@ window.__ModuleLoader__.load({
           }
           setGlossary(status.glossary)
           batchReasoning = status.batchReasoning === true
+          placeholderGuard = status.placeholderGuard !== false
+          placeholderFormat = normalizePlaceholderFormat(status.placeholderFormat)
           hoverRestore = status.hoverRestore === true
           hoverRestoreMs = Number.isInteger(status.hoverRestoreMs) ? status.hoverRestoreMs : 200
           if (targetLang === '') targetLang = status.targetLang || ''
@@ -1528,8 +1625,11 @@ window.__ModuleLoader__.load({
         'settings.promptHeader': '翻译提示词头',
         'settings.promptHeaderPlaceholder': '留空使用内置模板',
         'settings.promptHeaderHint': '作为每次翻译的指令句（逐段与合并请求都生效），可用 {target_language}、{target_lang}；默认值只用于中文目标，翻其它语言请改成对应语言的指令，留空使用内置模板。保存后下一次翻译立即生效。',
-        'settings.placeholderGuard': '基于文字遮罩的关键词保留',
-        'settings.placeholderGuardHint': '原文中的特殊引用内容会使用遮罩⟦n⟧替代，翻译完成后替换回原内容以保证内容准确，你可以根据模型的不同自定义适配的提示词',
+        'settings.placeholderGuard': '关键词保留',
+        'settings.placeholderGuardHint': '勾选后遮罩原文中的特殊引用内容，翻译完成后替换回原内容以保证准确；取消勾选则直接发送纯文本原文、不使用遮罩。关键词保留对模型能力要求较高，可能需要更高的模型智商；保存后重新开关一次「自动翻译」生效。',
+        'settings.placeholderFormat': '遮罩格式',
+        'settings.placeholderFormatPlaceholder': '[n]',
+        'settings.placeholderFormatHint': '用 n 代表编号，例如 [n]、{{n}}、⟦n⟧；默认 [n]。保存后重新开关一次「自动翻译」生效。',
         'settings.placeholderHint': '自定义关键词保留提示词',
         'settings.placeholderHintPlaceholder': '留空使用内置句子',
         'settings.placeholderHintHint': '填写后替换内置提示词；留空使用内置句子。',
@@ -1544,7 +1644,7 @@ window.__ModuleLoader__.load({
         'settings.saving': '保存中…',
         'settings.saved': '已保存，立即生效。',
         'settings.rejected': '保存被拒绝：宿主没有接受这次配置写入（该字段可能已不再可写，或宿主仍是旧版本）；请刷新页面，必要时重启 DSH 后重试。',
-        'settings.invalid': '请检查：地址需 http(s):// 开头，模型名不能为空，并发数需为 1–16 的整数。',
+        'settings.invalid': '请检查：地址需 http(s):// 开头，模型名不能为空，并发数需为 1–16 的整数，遮罩格式需包含 n（例如 [n]）。',
         'settings.unchanged': '没有改动。',
         'settings.failed': '保存失败：',
         'settings.loading': '正在读取配置…',
@@ -1600,8 +1700,11 @@ window.__ModuleLoader__.load({
         'settings.promptHeader': 'Translation prompt header',
         'settings.promptHeaderPlaceholder': 'Leave blank to use the built-in template',
         'settings.promptHeaderHint': 'The instruction line for every translation (per-segment and batched); {target_language} and {target_lang} are substituted. The default is Chinese-specific: change it for other targets, or leave it blank for the built-in template. Takes effect on the next translation after saving.',
-        'settings.placeholderGuard': 'Keyword retention via text masking',
-        'settings.placeholderGuardHint': 'Special quoted content in the source is replaced with ⟦n⟧ masks and restored after translation so it stays exact. You can customise the prompt for the model you use.',
+        'settings.placeholderGuard': 'Keyword retention',
+        'settings.placeholderGuardHint': 'When on, special quoted content is masked and restored after translation so it stays exact; when off, the plain source text is sent without masks. Keyword retention needs a capable model and may require a smarter model. Toggle Auto-translate off and on after saving.',
+        'settings.placeholderFormat': 'Mask format',
+        'settings.placeholderFormatPlaceholder': '[n]',
+        'settings.placeholderFormatHint': 'Use n for the slot number, e.g. [n], {{n}} or ⟦n⟧; the default is [n]. Toggle Auto-translate off and on after saving.',
         'settings.placeholderHint': 'Custom keyword-retention prompt',
         'settings.placeholderHintPlaceholder': 'Leave blank to use the built-in sentence',
         'settings.placeholderHintHint': 'Replaces the built-in sentence; leave it blank to keep the built-in one.',
@@ -1616,7 +1719,7 @@ window.__ModuleLoader__.load({
         'settings.saving': 'Saving…',
         'settings.saved': 'Saved and applied.',
         'settings.rejected': 'Save was rejected: the host did not accept this configuration write (the field may no longer be writable, or the host is still an older version); refresh the page, and restart DSH if needed, then try again.',
-        'settings.invalid': 'Check the fields: the address needs http(s)://, the model name cannot be empty, and concurrency must be an integer from 1 to 16.',
+        'settings.invalid': 'Check the fields: the address needs http(s)://, the model name cannot be empty, concurrency must be an integer from 1 to 16, and the mask format must contain n (for example [n]).',
         'settings.unchanged': 'No changes.',
         'settings.failed': 'Save failed: ',
         'settings.loading': 'Reading configuration…',
@@ -1716,7 +1819,7 @@ window.__ModuleLoader__.load({
     // Settings page: the row's configuration in the Plugins page.
     // ---------------------------------------------------------------------
     var SETTINGS_SLOT_KEY = 'harness-lingo-translator#harness-lingo-translator'
-    var SETTINGS_FIELDS = ['systemModel', 'baseUrl', 'model', 'concurrency', 'batchReasoning', 'promptHeader', 'placeholderGuard', 'placeholderHint', 'hoverRestore', 'hoverRestoreMs']
+    var SETTINGS_FIELDS = ['systemModel', 'baseUrl', 'model', 'concurrency', 'batchReasoning', 'promptHeader', 'placeholderGuard', 'placeholderFormat', 'placeholderHint', 'hoverRestore', 'hoverRestoreMs']
     var SETTINGS_LABEL_STYLE = { display: 'grid', gap: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--dsw-alias-label-primary)' }
     var SETTINGS_INPUT_STYLE = {
       width: '100%', boxSizing: 'border-box', padding: '7px 9px', borderRadius: '8px',
@@ -1756,6 +1859,17 @@ window.__ModuleLoader__.load({
           var guardFlag = drafts[field] === true
           if (guardFlag === (values !== undefined && values !== null && values[field] !== false)) continue
           ops.push({ op: 'set', path: [field], value: guardFlag })
+          continue
+        }
+        if (field === 'placeholderFormat') {
+          var maskFormat = String(drafts[field]).trim()
+          var currentFormat = String(values !== undefined && values !== null && values[field] !== undefined ? values[field] : '[n]').trim()
+          var resolvedFormat = maskFormat.length === 0 ? '[n]' : maskFormat
+          if (!resolvedFormat.includes('n') || resolvedFormat.replace(/n/g, '').length === 0 || resolvedFormat.length > 24) {
+            return { ops: [], error: 'invalid', field: field }
+          }
+          if (resolvedFormat === currentFormat) continue
+          ops.push(maskFormat.length === 0 ? { op: 'unset', path: [field] } : { op: 'set', path: [field], value: maskFormat })
           continue
         }
         if (field === 'placeholderHint') {
@@ -1932,14 +2046,24 @@ window.__ModuleLoader__.load({
             placeholder: t('settings.tokenPlaceholder'), style: SETTINGS_INPUT_STYLE, spellCheck: false, autoComplete: 'off', disabled: disabled,
           })),
         h('span', { style: hintStyle }, t('settings.tokenHint'))) : null
-      var guardFields = guardOn ? h('label', { style: SETTINGS_LABEL_STYLE },
-        h('span', null, t('settings.placeholderHint')),
-        h('textarea', {
-          rows: 2,
-          value: draft.placeholderHint === undefined ? String(values.placeholderHint === undefined ? '' : values.placeholderHint) : draft.placeholderHint,
-          onChange: edit('placeholderHint'), placeholder: t('settings.placeholderHintPlaceholder'),
-          style: Object.assign({}, SETTINGS_INPUT_STYLE, { fontFamily: 'inherit', resize: 'vertical', minHeight: '48px' }), disabled: disabled,
-        })) : null
+      var guardFields = guardOn ? h('div', { style: sectionStyle },
+        h('label', { style: SETTINGS_LABEL_STYLE },
+          h('span', null, t('settings.placeholderFormat')),
+          h('input', {
+            type: 'text',
+            value: draft.placeholderFormat === undefined ? String(values.placeholderFormat === undefined ? '[n]' : values.placeholderFormat) : draft.placeholderFormat,
+            onChange: edit('placeholderFormat'), placeholder: t('settings.placeholderFormatPlaceholder'),
+            style: SETTINGS_INPUT_STYLE, spellCheck: false, disabled: disabled,
+          })),
+        h('span', { style: hintStyle }, t('settings.placeholderFormatHint')),
+        h('label', { style: SETTINGS_LABEL_STYLE },
+          h('span', null, t('settings.placeholderHint')),
+          h('textarea', {
+            rows: 2,
+            value: draft.placeholderHint === undefined ? String(values.placeholderHint === undefined ? '' : values.placeholderHint) : draft.placeholderHint,
+            onChange: edit('placeholderHint'), placeholder: t('settings.placeholderHintPlaceholder'),
+            style: Object.assign({}, SETTINGS_INPUT_STYLE, { fontFamily: 'inherit', resize: 'vertical', minHeight: '48px' }), disabled: disabled,
+          }))) : null
       var hoverFields = hoverOn ? h('label', { style: SETTINGS_LABEL_STYLE },
         h('span', null, t('settings.hoverRestoreMs')),
         h('input', {
@@ -2149,6 +2273,9 @@ window.__ModuleLoader__.load({
     exports.__test = {
       protectText: protectText,
       restoreText: restoreText,
+      DEFAULT_PLACEHOLDER_FORMAT: DEFAULT_PLACEHOLDER_FORMAT,
+      placeholderToken: placeholderToken,
+      normalizePlaceholderFormat: normalizePlaceholderFormat,
       buildProtectRegex: buildProtectRegex,
       hashText: hashText,
       INVOCATIONS: INVOCATIONS,

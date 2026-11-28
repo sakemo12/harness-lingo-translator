@@ -19,6 +19,7 @@ const values = {
   systemModel: false,
   promptHeader: '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释',
   placeholderGuard: true,
+  placeholderFormat: '[n]',
   placeholderHint: '',
   hoverRestore: true,
   hoverRestoreMs: 200,
@@ -46,6 +47,7 @@ test('the settings page is keyed to the bundle row', () => {
 test('the settings fields use the host config names', () => {
   const fields = client.__test.SETTINGS_FIELDS
   assert.ok(fields.includes('systemModel'))
+  assert.ok(fields.includes('placeholderFormat'))
   assert.equal(fields.includes('sessionModel'), false)
   assert.deepEqual(diffConfigDraft({ systemModel: true }, values), {
     ops: [{ op: 'set', path: ['systemModel'], value: true }],
@@ -85,6 +87,17 @@ test('diffConfigDraft writes only changed fields', () => {
     ops: [{ op: 'set', path: ['placeholderGuard'], value: false }],
     error: null,
   })
+  assert.deepEqual(diffConfigDraft({ placeholderFormat: '[n]' }, values), { ops: [], error: null })
+  assert.deepEqual(diffConfigDraft({ placeholderFormat: '⟦n⟧' }, values), {
+    ops: [{ op: 'set', path: ['placeholderFormat'], value: '⟦n⟧' }],
+    error: null,
+  })
+  assert.deepEqual(diffConfigDraft({ placeholderFormat: '' }, { ...values, placeholderFormat: '⟦n⟧' }), {
+    ops: [{ op: 'unset', path: ['placeholderFormat'] }],
+    error: null,
+  })
+  assert.equal(diffConfigDraft({ placeholderFormat: '[]' }, values).error, 'invalid')
+  assert.equal(diffConfigDraft({ placeholderFormat: 'n' }, values).error, 'invalid')
   assert.deepEqual(diffConfigDraft({ placeholderHint: '  Keep tokens.  ' }, values), {
     ops: [{ op: 'set', path: ['placeholderHint'], value: 'Keep tokens.' }],
     error: null,
@@ -201,7 +214,10 @@ test('the translation and hover tabs show only their own fields', () => {
   assert.match(translation, /并发数/)
   assert.match(translation, /长思考合并请求/)
   assert.match(translation, /翻译提示词头/)
-  assert.match(translation, /基于文字遮罩的关键词保留/)
+  assert.match(translation, /关键词保留/)
+  assert.match(translation, /遮罩格式/)
+  assert.match(translation, /value="\[n\]"/)
+  assert.match(translation, /更高的模型智商/)
   assert.match(translation, /自定义关键词保留提示词/)
   assert.match(translation, /<textarea/)
   assert.equal(translation.includes('服务地址'), false)
@@ -283,7 +299,8 @@ test('the dependent inputs appear only while their checkbox is checked', () => {
     form: form({ value: { ...values, placeholderGuard: false } }),
   }))
   assert.equal(offTranslation.includes('自定义关键词保留提示词'), false)
-  assert.match(offTranslation, /基于文字遮罩的关键词保留/)
+  assert.equal(offTranslation.includes('遮罩格式'), false)
+  assert.match(offTranslation, /关键词保留/)
   const offHover = renderToStaticMarkup(React.createElement(ConfigPanel, {
     t,
     initialTab: 'hover',

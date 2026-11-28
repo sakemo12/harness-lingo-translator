@@ -23,7 +23,7 @@ issue for a vulnerability.
   write is the per-workspace cache under `~/.dsh/cache/harness-lingo-translator/`; the
   browser half writes only a bounded translation cache in `localStorage`.
 - Placeholder verification is the trust boundary: a translation that loses,
-  renumbers or invents a `⟦n⟧` token — or that is empty or truncated — is
+  renumbers or invents a placeholder token — or that is empty or truncated — is
   discarded and the original text stays.
 - `baseUrl` is validated as an `http(s)` URL at profile load; a `file:` or other
   scheme fails loudly.

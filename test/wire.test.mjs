@@ -43,6 +43,8 @@ test('records validate a status result', () => {
     model: 'm',
     glossary: [],
     batchReasoning: false,
+    placeholderGuard: true,
+    placeholderFormat: '[n]',
     hoverRestore: true,
     hoverRestoreMs: 1500,
     configHash: 'abcdef0123456789',
@@ -53,6 +55,10 @@ test('records validate a status result', () => {
   assert.throws(() => parseTranslateStatus({ ...status, glossary: ['ok', 1] }), /glossary/)
   assert.throws(() => parseTranslateStatus({ ...status, reason: 1 }), /reason/)
   assert.throws(() => parseTranslateStatus({ ...status, batchReasoning: 'yes' }), /batchReasoning/)
+  assert.throws(() => parseTranslateStatus({ ...status, placeholderGuard: 'yes' }), /placeholderGuard/)
+  assert.equal(parseTranslateStatus({ ...status, placeholderGuard: false }).placeholderGuard, false)
+  assert.throws(() => parseTranslateStatus({ ...status, placeholderFormat: 1 }), /placeholderFormat/)
+  assert.throws(() => parseTranslateStatus({ ...status, placeholderFormat: 'x'.repeat(25) }), /placeholderFormat/)
   assert.throws(() => parseTranslateStatus({ ...status, hoverRestore: 'yes' }), /hoverRestore/)
   assert.equal(parseTranslateStatus({ ...status, hoverRestoreMs: 0 }).hoverRestoreMs, 0)
   assert.throws(() => parseTranslateStatus({ ...status, hoverRestoreMs: -1 }), /hoverRestoreMs/)

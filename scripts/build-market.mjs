@@ -284,7 +284,7 @@ function awesomePullRequest() {
     '',
     'Translation runs through a local OpenAI-compatible endpoint (LM Studio, llama.cpp or vLLM serving',
     '`tencent/HY-MT1.5-1.8B`) or through the session\'s own model route. The browser masks code, paths,',
-    'commands, URLs, identifiers and numbers as `⟦n⟧` placeholders, the host translates only the prose, and',
+    'commands, URLs, identifiers and numbers as `[n]` placeholders (the format is configurable), the host translates only the prose, and',
     'the masked text is restored verbatim. Session logs and workspace files are never written.',
     '',
     '## Rule check',

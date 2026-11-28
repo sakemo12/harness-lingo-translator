@@ -5,12 +5,12 @@ plain-JS host + hand-written client bundle). Repo-local decisions live here.
 
 ## Shape
 
-Full-page translator. The browser walks the DOM, masks everything that must
-stay verbatim into `⟦n⟧`, and asks the host to translate the prose with a
-**local OpenAI-compatible HY-MT endpoint** (tencent/HY-MT1.5-1.8B-GGUF under
-llama.cpp / vLLM / any compatible server) or, with `systemModel: true`, the
-host `llm` route. Local mode uses only an optional bearer token; system mode
-uses the host's own model credentials.
+Chat-flow translator. The browser walks the conversation flow column, masks
+everything that must stay verbatim into `[n]` tokens (unless masking is off), and asks
+the host to translate the prose with a **local OpenAI-compatible HY-MT
+endpoint** (tencent/HY-MT1.5-1.8B-GGUF under llama.cpp / vLLM / any compatible
+server) or, with `systemModel: true`, the host `llm` route. Local mode uses only
+an optional bearer token; system mode uses the host's own model credentials.
 
 ## Layout
 
@@ -68,12 +68,13 @@ uses the host's own model credentials.
   the placeholder guard.
 - **Official prompts.** The model card's templates are reproduced in
   `lib/engine.mjs`; a placeholder-retention clause is added only to segments
-  that actually carry `⟦n⟧` (on a plain segment it leaks into the answer), and
+  that actually carry a configured placeholder token (on a plain segment it leaks into the answer), and
   the pristine template is used otherwise. `{source_text}` output is the only
   thing sent in the user message. No system prompt is sent (the model card says
   the model has none). The clause is configurable: `placeholderGuard` switches
-  it off, and `placeholderHint` replaces it **inline in the instruction** (never
-  as a separate line, which the model translates as content).
+  both the masking and the clause off, and `placeholderHint` replaces the clause
+  **inline in the instruction** (never as a separate line, which the model
+  translates as content).
 - **Batched reasoning.** With `batchReasoning` on, the browser groups a
   reasoning block (`[data-variant="think"]`) and the host sends it as numbered
   lines, `BATCH_LIMIT` (8) per request; a malformed numbering or placeholder
@@ -150,25 +151,54 @@ uses the host's own model credentials.
   revealed are translated. Re-enabling restores only the segments recorded in
   `translatedKeys` (see above). Streaming (`data-streaming`, `aria-busy`) and
   hidden content are skipped. Switching off restores every translated node.
+- **Scope is the chat flow column.** Only text inside
+  `div.EvIC1a_column[data-chat-flow]` is walked, baselined, cached or requested.
+  The sidebar, settings page, file viewer, composer and the plugin's own control
+  are outside it; translating them is a bug. When no conversation column is
+  rendered, the translator does nothing. Keep every scan (`collectPending`,
+  `markBaseline`, `reapplyCached`) on this scope; the tests mount fixtures inside
+  the column and one asserts outside text stays original.
+- **Masking can be turned off.** With `placeholderGuard: false` (the settings
+  checkbox "关键词保留" / "Keyword retention"), the client sends the plain
+  source: no masks, no inline-code unit assembly, no retention clause, and no
+  placeholder verification on either backend (a literal token in prose is
+  content). `status()` exposes the setting; re-toggling the switch picks it up.
+- **Mask format is configurable.** `placeholderFormat` (volatile, default `[n]`)
+  uses the first `n` as the slot number; `[n]`, `{{n}}` and `⟦n⟧` are valid.
+  Both the client and the host build their tokens and regex from it, the status
+  exposes it, and saved hints that still use legacy `⟦n⟧` tokens are adapted to
+  the active format. Reject a format with no `n`, only `n`, or more than 24
+  characters. The default `[n]` is the easiest for small models; custom formats
+  may require a smarter model.
 - **Masking targets code, not prose.** Product terms use lookarounds
   (`bundle`/`digit` must not match `bun`/`git`); a hyphenated word is an
   identifier only with a digit or the `dsh-` prefix; a slash sequence needs a
-  path boundary; model names and versions are one token. Ordinary prose such as
-  `fail-closed`, `state-of-the-art`, `lost/duplicated/invented` must stay
-  translatable.
+  path boundary; model names and versions are one token; a relative path with a
+  directory and a known extension (`client/index.js`) is one token. Masking only
+  its basename leaves `client/[0]`, which HY-MT then drops or rewrites. Ordinary
+  prose such as `fail-closed`, `state-of-the-art`, `lost/duplicated/invented`
+  must stay translatable.
 - **Inline code is a placeholder, not a split.** A paragraph (`p`, `li`, `td`,
   `h1`–`h6`, `blockquote`, `dd`, `dt`, `figcaption`) with prose text on both sides
   of `<code>`/`<kbd>`/`<samp>` is one translation unit: each inline code becomes
   a placeholder, the combined source is sent once, and the parts are restored
-  around the untouched code elements. `pre` code blocks remain skipped.
+  around the untouched code elements. `pre` code blocks remain skipped. With
+  masking off the unit is not built; the prose text nodes are translated
+  separately so no placeholder is ever sent.
+- **Prompt text has no leading blank line.** The instruction is joined to the
+  source without `\n\n`; leading whitespace and literal `\n` / `\"` escape
+  sequences are stripped from the source before the prompt is built. JSON still
+  escapes quotes and newlines on the wire — the model receives the decoded text.
 - **Code-like surfaces stay verbatim.** `pre`/`code` plus the app's semantic
   surfaces (`[data-terminal]`, `[data-command-text]`, `[data-read]`,
   `[data-diff]`, `[data-json]`, `[data-code]`) are never translated. Tool
   descriptions (task names) are prose and are translated. Do not detect code by
   font family: jsdom reports monospace for everything and the check becomes
   untestable.
-- **Fail closed.** A translation that drops, renumbers or invents a `⟦n⟧`
-  placeholder, or that is empty/truncated, keeps the original text.
+- **Fail closed when masking is on.** A translation that drops, renumbers or
+  invents a configured placeholder, or that is empty/truncated, keeps the original
+  text. With masking off there are no generated tokens, so placeholder
+  verification is skipped: a literal token in prose is content, not a token.
 - **Live switch and localized errors.** The floating switch must not be disabled
   while `state.working`; clicking it calls `stop()` (generation bump, restore and
   cache flush). Error text goes through `localizeError` into the active locale
@@ -191,10 +221,11 @@ uses the host's own model credentials.
   `Translation cache`); only the active tab renders. `Connection` has two
   mutually exclusive checkboxes — `Custom service` shows `baseUrl`/`model`/`apiKey`;
   `System model` (`systemModel: true`) shows the host route hint and hides
-  local-only translation fields. The cache tab shows `~/.dsh/cache/harness-lingo-translator/`
-  and prunes entries whose session id is gone. Defaults must be visible in the
+  local-only translation fields. The Translation tab carries the `关键词保留` checkbox, the `遮罩格式` field and
+  the custom retention sentence. The cache tab shows
+  `~/.dsh/cache/harness-lingo-translator/` and prunes entries whose session id is gone. Defaults must be visible in the
   fields; tab titles are 15px and field labels 14px.
-- **Live settings fields.** `baseUrl`, `model`, `concurrency`, `batchReasoning`, `promptHeader`, `placeholderGuard`, `placeholderHint`, `systemModel`, `hoverRestore`, `hoverRestoreMs` and `apiKey` are
+- **Live settings fields.** `baseUrl`, `model`, `concurrency`, `batchReasoning`, `promptHeader`, `placeholderGuard`, `placeholderFormat`, `placeholderHint`, `systemModel`, `hoverRestore`, `hoverRestoreMs` and `apiKey` are
   Schemastery volatile fields, so the Plugins page form writes them through the
   settings service and the running service re-reads them on every call
   (`createConfigSource`). The form must use the Host field name `systemModel`

@@ -9,12 +9,20 @@ import { loadClient } from './helpers.mjs'
 const client = await loadClient()
 const { createEngine } = client.__test
 
+// The engine only walks the chat flow column; fixtures put their content there
+// unless a test deliberately appends outside it.
+let flowRoot = null
+
 function withDom(html) {
-  const dom = new JSDOM('<!doctype html><html><body>' + html + '</body></html>', { url: 'https://example.test/' })
+  const dom = new JSDOM(
+    '<!doctype html><html><body><div class="EvIC1a_column" data-chat-flow id="flow-root">' + html + '</div></body></html>',
+    { url: 'https://example.test/' },
+  )
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   globalThis.NodeFilter = dom.window.NodeFilter
   globalThis.MutationObserver = dom.window.MutationObserver
+  flowRoot = dom.window.document.getElementById('flow-root')
   return dom
 }
 
@@ -33,6 +41,7 @@ function fakeApi(overrides = {}) {
         model: 'hy-mt1.5-1.8b',
         glossary: [],
         batchReasoning: false,
+        placeholderGuard: true,
         hoverRestore: false,
         hoverRestoreMs: 1500,
         configHash: 'testconfig',
@@ -112,8 +121,75 @@ test('translates a block that appears after the switch is on', async () => {
   await withEngine('', {}, async (engine) => {
     await engine.start()
     const node = paragraph('New message here')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 New message here')
+  })
+})
+
+test('never translates outside the conversation flow column', async () => {
+  await withEngine('', {}, async (engine, api) => {
+    await engine.start()
+    // Sidebar / settings / file-viewer text lives outside the column.
+    const outside = paragraph('Sidebar setting outside the conversation')
+    document.body.appendChild(outside)
+    const inside = paragraph('Chat message inside the conversation')
+    flowRoot.appendChild(inside)
+    await waitFor(() => inside.textContent === '译 Chat message inside the conversation')
+    await delay(700)
+    assert.equal(outside.textContent, 'Sidebar setting outside the conversation')
+    assert.equal(api.calls.translate, 1)
+  })
+})
+
+test('sends plain text without masks when placeholder masking is off', async () => {
+  await withEngine('', { status: { placeholderGuard: false } }, async (engine, api) => {
+    await engine.start()
+    const node = paragraph('Run `npm test` on v0.2.1-rc.2 at /repo/src now')
+    flowRoot.appendChild(node)
+    await waitFor(() => node.textContent === '译 Run `npm test` on v0.2.1-rc.2 at /repo/src now')
+    const segments = api.calls.log.flatMap((entry) => (entry.segments === undefined ? [] : entry.segments))
+    assert.deepEqual(segments, ['Run `npm test` on v0.2.1-rc.2 at /repo/src now'])
+    assert.equal(segments[0].includes('['), false)
+  })
+})
+
+test('accepts literal mask-like prose when placeholder masking is off', async () => {
+  await withEngine('', { status: { placeholderGuard: false } }, async (engine) => {
+    await engine.start()
+    const text = 'The token [0] is literal prose, not a mask.'
+    const node = paragraph(text)
+    flowRoot.appendChild(node)
+    await waitFor(() => node.textContent === '译 ' + text)
+  })
+})
+
+test('uses the mask format reported by the host', async () => {
+  await withEngine('', { status: { placeholderFormat: '⟦n⟧' } }, async (engine, api) => {
+    await engine.start()
+    const node = paragraph('Fix client/index.js and retry 3 times.')
+    flowRoot.appendChild(node)
+    await waitFor(() => node.textContent.startsWith('译 '))
+    const segments = api.calls.log.flatMap((entry) => (entry.segments === undefined ? [] : entry.segments))
+    assert.deepEqual(segments, ['Fix ⟦0⟧ and retry ⟦1⟧ times.'])
+  })
+})
+
+test('does not build inline-code placeholders when placeholder masking is off', async () => {
+  await withEngine('', { status: { placeholderGuard: false } }, async (engine, api) => {
+    await engine.start()
+    const block = document.createElement('p')
+    const before = document.createTextNode('The host ')
+    const code = document.createElement('code')
+    code.textContent = 'resolveConfig'
+    const after = document.createTextNode(' validates baseUrl without masks.')
+    block.append(before, code, after)
+    flowRoot.appendChild(block)
+    await waitFor(() => before.nodeValue.startsWith('译 The host') && after.nodeValue.includes('译'))
+    const segments = api.calls.log.flatMap((entry) => (entry.segments === undefined ? [] : entry.segments))
+    assert.equal(segments.length, 2)
+    assert.equal(segments.some((segment) => segment.includes('[')), false)
+    assert.equal(segments.some((segment) => segment.includes('resolveConfig')), false)
+    assert.equal(code.textContent, 'resolveConfig')
   })
 })
 
@@ -124,7 +200,7 @@ test('waits for a streaming block to finish generating', async () => {
     block.setAttribute('data-streaming', '')
     const node = paragraph('Streaming answer')
     block.appendChild(node)
-    document.body.appendChild(block)
+    flowRoot.appendChild(block)
     await delay(700)
     assert.equal(node.textContent, 'Streaming answer')
     block.removeAttribute('data-streaming')
@@ -139,7 +215,7 @@ test('never translates collapsed text until it is revealed', async () => {
     box.style.display = 'none'
     const node = paragraph('Collapsed content')
     box.appendChild(node)
-    document.body.appendChild(box)
+    flowRoot.appendChild(box)
     await delay(700)
     assert.equal(node.textContent, 'Collapsed content')
     box.style.display = ''
@@ -152,7 +228,7 @@ test('translates text that appears while the status probe runs', async () => {
     const pending = engine.start()
     await delay(30)
     const node = paragraph('Arrived during probe')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await pending
     await waitFor(() => node.textContent === '译 Arrived during probe')
   })
@@ -162,7 +238,7 @@ test('keeps text that was already visible when the switch was turned on', async 
   await withEngine('<p id="old">Visible before</p>', {}, async (engine) => {
     await engine.start()
     const fresh = paragraph('Fresh line')
-    document.body.appendChild(fresh)
+    flowRoot.appendChild(fresh)
     await waitFor(() => fresh.textContent === '译 Fresh line')
     assert.equal(document.getElementById('old').textContent, 'Visible before')
   })
@@ -176,7 +252,7 @@ test('translates a closed details body only after it opens', async () => {
     summary.textContent = 'More'
     const body = paragraph('Details body')
     details.append(summary, body)
-    document.body.appendChild(details)
+    flowRoot.appendChild(details)
     await delay(700)
     assert.equal(body.textContent, 'Details body')
     details.setAttribute('open', '')
@@ -207,11 +283,11 @@ test('does not retry a failing segment on every mutation', async () => {
     }
     await engine.start()
     const node = paragraph('Failing segment')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await delay(1000)
     assert.equal(api.calls.translate, 1)
     for (let i = 0; i < 12; i += 1) {
-      document.body.appendChild(document.createElement('span'))
+      flowRoot.appendChild(document.createElement('span'))
       await delay(50)
     }
     await delay(600)
@@ -237,10 +313,10 @@ test('does not duplicate segments while a batch is in flight', async () => {
     }
     await engine.start()
     const nodes = [paragraph('First new line'), paragraph('Second new line'), paragraph('Third new line')]
-    document.body.append(...nodes)
+    flowRoot.append(...nodes)
     await delay(500)
     for (let i = 0; i < 30; i += 1) {
-      document.body.appendChild(document.createElement('span'))
+      flowRoot.appendChild(document.createElement('span'))
       await delay(30)
     }
     await waitFor(() => nodes.every((node) => node.textContent.startsWith('译 ')), 6000)
@@ -264,13 +340,13 @@ test('pauses after repeated whole-batch failures', async () => {
     // Distinct texts: a shared number would mask to the same key and be
     // deduplicated by the failure guard, not by the pause rule.
     for (const text of ['Alpha line', 'Beta line', 'Gamma line', 'Delta line']) {
-      document.body.appendChild(paragraph(text))
+      flowRoot.appendChild(paragraph(text))
       await delay(600)
     }
     assert.equal(api.calls.translate, 4)
     assert.match(engine.state().error, /boom/)
     const calls = api.calls.translate
-    document.body.appendChild(paragraph('Should retry without a pause'))
+    flowRoot.appendChild(paragraph('Should retry without a pause'))
     await delay(800)
     assert.equal(api.calls.translate, calls + 1)
   })
@@ -300,7 +376,7 @@ test('translates tool descriptions but never command or code surfaces', async ()
     diff.setAttribute('data-diff', '')
     diff.textContent = '+ const answer = 42'
     card.append(description, terminal, mono, read, diff)
-    document.body.append(card)
+    flowRoot.append(card)
 
     await waitFor(() => description.textContent === '译 Check the translation service health')
     await delay(500)
@@ -322,7 +398,7 @@ test('batches one reasoning block into a single request', async () => {
     second.setAttribute('data-variant', 'think')
     second.append(paragraph('Third thought'), paragraph('Fourth thought'))
     const plain = paragraph('Plain message text')
-    document.body.append(first, second, plain)
+    flowRoot.append(first, second, plain)
     const nodes = [first, second].flatMap((block) => [...block.querySelectorAll('p')]).concat(plain)
     await waitFor(() => nodes.every((node) => node.textContent.startsWith('译 ')), 5000)
 
@@ -341,7 +417,7 @@ test('does not batch when the switch is off', async () => {
     const block = document.createElement('div')
     block.setAttribute('data-variant', 'think')
     block.append(paragraph('Alpha thought'), paragraph('Beta thought'))
-    document.body.append(block)
+    flowRoot.append(block)
     await waitFor(() => [...block.querySelectorAll('p')].every((node) => node.textContent.startsWith('译 ')), 5000)
     assert.equal(api.calls.log.length, 2)
     assert.ok(api.calls.log.every((entry) => entry.batch === false))
@@ -353,7 +429,7 @@ test('never translates Chinese blocks', async () => {
     await engine.start()
     const chinese = paragraph('这是一个中文段落，不需要翻译。')
     const english = paragraph('This English paragraph needs translation.')
-    document.body.append(chinese, english)
+    flowRoot.append(chinese, english)
     await waitFor(() => english.textContent === '译 This English paragraph needs translation.')
     await delay(400)
     assert.equal(chinese.textContent, '这是一个中文段落，不需要翻译。')
@@ -365,7 +441,7 @@ test('translates an English block that only quotes Chinese', async () => {
   await withEngine('', {}, async (engine) => {
     await engine.start()
     const node = paragraph('The reply was “好的” and then it stopped.')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 The reply was “好的” and then it stopped.')
   })
 })
@@ -381,7 +457,7 @@ test('never translates messages sent by the user', async () => {
     assistant.setAttribute('data-chat-flow-kind', 'assistant')
     const assistantText = paragraph('This is the assistant reply.')
     assistant.appendChild(assistantText)
-    document.body.append(userMessage, assistant)
+    flowRoot.append(userMessage, assistant)
     await waitFor(() => assistantText.textContent === '译 This is the assistant reply.')
     await delay(400)
     assert.equal(userText.textContent, 'This is what the user typed.')
@@ -393,7 +469,7 @@ test('shows the original after a stationary hover; moving inside the block keeps
   await withEngine('', { status: { hoverRestore: true, hoverRestoreMs: 300 } }, async (engine) => {
     await engine.start()
     const node = paragraph('Hovered message text')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 Hovered message text')
     node.dispatchEvent(new window.MouseEvent('mousemove', { bubbles: true }))
     await delay(500)
@@ -411,7 +487,7 @@ test('a zero hover delay shows the original immediately and keeps it inside the 
   await withEngine('', { status: { hoverRestore: true, hoverRestoreMs: 0 } }, async (engine) => {
     await engine.start()
     const node = paragraph('Hovered message text')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 Hovered message text')
     node.dispatchEvent(new window.MouseEvent('mousemove', { bubbles: true }))
     await delay(30)
@@ -434,7 +510,7 @@ test('hovering a leading icon previews its block without touching a neighbour', 
     const firstText = document.createTextNode('First block text')
     first.append(icon, firstText)
     const second = paragraph('Second block text')
-    document.body.append(first, second)
+    flowRoot.append(first, second)
     await waitFor(() => firstText.nodeValue === '译 First block text' && second.textContent === '译 Second block text')
 
     icon.dispatchEvent(new window.MouseEvent('mousemove', { bubbles: true }))
@@ -452,7 +528,7 @@ test('does not preview when hover restore is off', async () => {
   await withEngine('', {}, async (engine) => {
     await engine.start()
     const node = paragraph('Hovered message text')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 Hovered message text')
     node.dispatchEvent(new window.MouseEvent('mousemove', { bubbles: true }))
     await delay(500)
@@ -464,7 +540,7 @@ test('re-enabling shows cached translations again without new requests', async (
   await withEngine('', {}, async (engine, api) => {
     await engine.start()
     const node = paragraph('Cached message text')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 Cached message text')
     const count = api.calls.translate
     await engine.stop()
@@ -483,7 +559,7 @@ test('keeps a collapsed reasoning summary that was already visible original', as
     const text = 'First paragraph preview text that was visible before enabling and is long enough to exceed the collapsed limit. '.repeat(3).trim()
     const summary = paragraph(text)
     row.appendChild(summary)
-    document.body.appendChild(row)
+    flowRoot.appendChild(row)
     await engine.start()
     await delay(700)
     assert.equal(summary.textContent, text)
@@ -498,7 +574,7 @@ test('translates a newly appeared collapsed reasoning summary, truncated', async
     row.setAttribute('data-variant', 'think')
     const summary = paragraph('First paragraph preview text that appeared after enabling and is long enough to exceed the collapsed limit. '.repeat(3).trim())
     row.appendChild(summary)
-    document.body.appendChild(row)
+    flowRoot.appendChild(row)
     await waitFor(() => summary.textContent.startsWith('译 '))
     assert.ok(summary.textContent.endsWith('…'))
     assert.ok(summary.textContent.length <= 170)
@@ -509,7 +585,7 @@ test('re-applies a translation when the app renders the original text again', as
   await withEngine('', {}, async (engine, api) => {
     await engine.start()
     const node = paragraph('Rendered reply text')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 Rendered reply text')
     const count = api.calls.translate
     node.nodeValue = 'Rendered reply text'
@@ -527,7 +603,7 @@ test('keeps a newly translated collapsed reasoning summary when the row expands'
     const text = 'First paragraph preview text that stays translated after expanding.'
     const summary = paragraph(text)
     row.appendChild(summary)
-    document.body.appendChild(row)
+    flowRoot.appendChild(row)
     await waitFor(() => summary.textContent.startsWith('译 '))
     const count = api.calls.translate
     row.setAttribute('data-expanded', '')
@@ -568,7 +644,7 @@ test('restores originals when the switch is turned off', async () => {
   await withEngine('', {}, async (engine) => {
     await engine.start()
     const node = paragraph('New message here')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 New message here')
     engine.stop()
     assert.equal(node.textContent, 'New message here')
@@ -580,7 +656,7 @@ test('masks the glossary terms reported by the host', async () => {
   await withEngine('', { status: { glossary: ['Acme Widgets'] } }, async (engine) => {
     await engine.start()
     const node = paragraph('Use Acme Widgets here')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 Use Acme Widgets here')
   })
 })
@@ -613,7 +689,7 @@ test('does not replay host-cached translations onto text that was already visibl
 test('does not replay a host-cached inline-code paragraph onto existing text', async () => {
   await withEngine('<p id="u">The host <code>resolveConfig</code> validates input.</p>', {
     getWorkspace: () => '/tmp/workspace',
-    cacheEntries: { 'The host ⟦0⟧ validates input.': '宿主 ⟦0⟧ 校验输入。' },
+    cacheEntries: { 'The host [0] validates input.': '宿主 [0] 校验输入。' },
   }, async (engine, api) => {
     await engine.start()
     await delay(120)
@@ -630,7 +706,7 @@ test('re-enabling restores only segments translated in this page session', async
   }, async (engine, api) => {
     await engine.start()
     const fresh = paragraph('Fresh translated text')
-    document.body.appendChild(fresh)
+    flowRoot.appendChild(fresh)
     await waitFor(() => fresh.textContent === '译 Fresh translated text')
     const count = api.calls.translate
     assert.equal(document.getElementById('a').textContent, 'Existing cached text')
@@ -648,7 +724,7 @@ test('saves successful translations into the workspace cache', async () => {
   await withEngine('<p id="a">New translation text</p>', { getWorkspace: () => '/tmp/workspace' }, async (engine, api) => {
     await engine.start()
     const node = paragraph('New translation text')
-    document.body.appendChild(node)
+    flowRoot.appendChild(node)
     await waitFor(() => node.textContent === '译 New translation text')
     await delay(1000)
     assert.equal(api.calls.cacheSave, 1)
@@ -667,7 +743,7 @@ test('resolves the workspace from the host session header and uses its cache for
     await delay(120)
     assert.equal(document.getElementById('a').textContent, 'Cached from host workspace')
     const fresh = paragraph('Cached from host workspace')
-    document.body.appendChild(fresh)
+    flowRoot.appendChild(fresh)
     await waitFor(() => fresh.textContent === '译 Cached from host workspace')
     assert.equal(document.getElementById('a').textContent, 'Cached from host workspace')
     assert.equal(api.calls.cacheLoad, 1)
@@ -686,12 +762,12 @@ test('translates a paragraph with inline code as one unit and keeps the code', a
     const after = document.createTextNode(' validates baseUrl/model/concurrency regardless of systemModel.')
     paragraph.append(before, code, after)
     const afterOriginal = after.nodeValue
-    document.body.appendChild(paragraph)
+    flowRoot.appendChild(paragraph)
     await waitFor(() => before.nodeValue.startsWith('译 The host') && after.nodeValue !== afterOriginal)
     assert.equal(api.calls.translate, 1)
     const sent = api.calls.log[0].segments
     assert.equal(sent.length, 1)
-    assert.equal(sent[0].includes('The host ⟦0⟧ validates ⟦1⟧/model/concurrency regardless of ⟦2⟧.'), true)
+    assert.equal(sent[0].includes('The host [0] validates [1]/model/concurrency regardless of [2].'), true)
     assert.equal(code.textContent, 'resolveConfig')
     assert.ok(after.nodeValue.includes('baseUrl/model/concurrency'))
   })

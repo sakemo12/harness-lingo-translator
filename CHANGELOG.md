@@ -17,8 +17,48 @@
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-11-28
+
+### Added
+
+- A configurable mask template, `placeholderFormat` (Settings → Translation →
+  遮罩格式 / Mask format). The first `n` is the slot number, so `[n]`, `{{n}}` and
+  `⟦n⟧` all work; the default is `[n]`. Client and host build their tokens and
+  regex from the same template, `status()` exposes it, and cache entries are
+  keyed by it. Invalid templates (no `n`, only `n`, over 24 characters) are
+  rejected.
+- The settings hint now notes that keyword retention is demanding for small
+  models and may require a smarter model.
+
+### Changed
+
+- The default mask format is now `[n]` instead of `⟦n⟧`. The built-in retention
+  sentence and the system-model prompt use the configured format; a saved hint
+  that still contains legacy `⟦n⟧` tokens is adapted to the active format.
+- The setting formerly titled 基于文字遮罩的关键词保留 / “Keyword retention via
+  text masking” is now 关键词保留 / “Keyword retention”, and the mask template is
+  a separate field.
+
 ### Fixed
 
+- Translation is strictly scoped to the conversation flow column
+  (`div.EvIC1a_column[data-chat-flow]`). The sidebar, settings page, file viewer,
+  composer and the floating control are never walked, baselined or requested;
+  the DOM tests now mount their fixtures inside that column, and a regression
+  test asserts that text outside it stays original.
+- Turning off "关键词保留" / "Keyword retention" (`placeholderGuard: false`)
+  now sends the plain source text: no masks, no inline-code placeholders, no
+  retention clause and no placeholder verification (a literal token in prose is
+  content, not a token). `status()` exposes the setting to the client, and
+  re-toggling Auto-translate picks it up.
+- The source text in a translation request no longer starts with a blank line:
+  the instruction is joined to the source without `\n\n`, and leading whitespace
+  plus literal `\n` / `\"` escape sequences are stripped. JSON still escapes
+  quotes and newlines on the wire; the model receives the decoded text.
+- A relative path with a directory and a known extension is masked as one
+  placeholder (`client/index.js`), not `client/[0]`. The latter made HY-MT drop
+  or rewrite the adjacent placeholder, so the fail-closed guard discarded an
+  otherwise good translation.
 - Text that was already visible when the switch was first turned on is no longer
   translated from a warm cache. `reapplyCached()` restores only segments
   translated in this page session (`translatedKeys`), so the baseline wins on a

@@ -4,7 +4,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Context } from '@deepseek-ai/cordis'
-import { latestRoute, translateViaSession } from '../lib/session-backend.mjs'
+import { buildSessionSystemPrompt, latestRoute, translateViaSession } from '../lib/session-backend.mjs'
 import { TranslateService } from '../lib/service.mjs'
 import { createConfigSource } from '../index.mjs'
 
@@ -32,16 +32,16 @@ test('resolves the newest request/header across sessions', () => {
 test('translates a JSON batch through the session route', async () => {
   const calls = []
   const result = await translateViaSession({
-    llm: { stream: (request) => { calls.push(request); return fakeLlm('["你好 ⟦0⟧","世界"]').stream(request) } },
+    llm: { stream: (request) => { calls.push(request); return fakeLlm('["你好 [0]","世界"]').stream(request) } },
     route: { provider: 'p', model: 'm' },
     targetLang: 'zh',
-    segments: ['Hello ⟦0⟧', 'World'],
+    segments: ['Hello [0]', 'World'],
   })
-  assert.deepEqual(result.translations, ['你好 ⟦0⟧', '世界'])
+  assert.deepEqual(result.translations, ['你好 [0]', '世界'])
   assert.deepEqual(result.failed, [])
   assert.equal(calls.length, 1)
   assert.equal(calls[0].reasoningEffort, 'off')
-  assert.deepEqual(JSON.parse(calls[0].messages[0].content[0].text), ['Hello ⟦0⟧', 'World'])
+  assert.deepEqual(JSON.parse(calls[0].messages[0].content[0].text), ['Hello [0]', 'World'])
 })
 
 test('marks a batch that loses a placeholder', async () => {
@@ -49,11 +49,31 @@ test('marks a batch that loses a placeholder', async () => {
     llm: fakeLlm('["你好"]'),
     route: { provider: 'p', model: 'm' },
     targetLang: 'zh',
-    segments: ['Hello ⟦0⟧'],
+    segments: ['Hello [0]'],
   })
-  assert.deepEqual(result.translations, ['Hello ⟦0⟧'])
+  assert.deepEqual(result.translations, ['Hello [0]'])
   assert.deepEqual(result.failed, [0])
   assert.match(result.error, /placeholder/)
+})
+
+test('the session system prompt omits placeholder rules when masking is off', () => {
+  assert.match(buildSessionSystemPrompt('zh', [], true), /\[0\]/)
+  assert.doesNotMatch(buildSessionSystemPrompt('zh', [], false), /\[\d+\]/)
+  assert.match(buildSessionSystemPrompt('zh', [], true, '⟦n⟧'), /⟦0⟧/)
+  assert.match(buildSessionSystemPrompt('zh', [], false), /1\. Never translate or alter/)
+})
+
+test('disabling the guard accepts a session answer without the literal placeholder', async () => {
+  const result = await translateViaSession({
+    llm: fakeLlm('["你好"]'),
+    route: { provider: 'p', model: 'm' },
+    targetLang: 'zh',
+    segments: ['Hello [0]'],
+    guard: false,
+  })
+  assert.deepEqual(result.translations, ['你好'])
+  assert.deepEqual(result.failed, [])
+  assert.equal(result.error, null)
 })
 
 test('the service dispatches to the session backend when systemModel is on', async () => {

@@ -13,7 +13,7 @@ test('protects commands, paths and file names', () => {
   const result = protectText(source, [])
   assert.ok(result !== null)
   assert.equal(result.slots.length, 3)
-  assert.ok(result.masked.includes('⟦0⟧'))
+  assert.ok(result.masked.includes('[0]'))
   assert.equal(restoreText(result.masked, result.slots), source)
 })
 
@@ -21,14 +21,14 @@ test('protects product names verbatim', () => {
   const result = protectText('DeepSeek Harness uses Cordis', [])
   assert.ok(result !== null)
   assert.equal(restoreText(result.masked, result.slots), 'DeepSeek Harness uses Cordis')
-  assert.equal(result.masked.replace(/⟦\d+⟧/g, 'X'), 'X uses X')
+  assert.equal(result.masked.replace(/\[\d+\]/g, 'X'), 'X uses X')
 })
 
 test('keeps numbers, versions and identifiers', () => {
   const source = 'Set max_tokens=4096 and retry 3 times on v0.2.1-rc.1'
   const result = protectText(source, [])
   assert.ok(result !== null)
-  assert.match(result.masked, /⟦\d+⟧/)
+  assert.match(result.masked, /\[\d+\]/)
   assert.equal(restoreText(result.masked, result.slots), source)
 })
 
@@ -61,15 +61,15 @@ test('returns null when there is no prose left', () => {
 })
 
 test('rejects translations that drop or invent placeholders', () => {
-  assert.equal(restoreText('⟦0⟧ only', ['a', 'b']), null)
-  assert.equal(restoreText('⟦0⟧ and ⟦9⟧', ['a']), null)
-  assert.equal(restoreText('⟦0⟧ x', ['a']), 'a x')
+  assert.equal(restoreText('[0] only', ['a', 'b']), null)
+  assert.equal(restoreText('[0] and [9]', ['a']), null)
+  assert.equal(restoreText('[0] x', ['a']), 'a x')
 })
 
 test('honours an extra glossary term', () => {
   const result = protectText('Use Acme Widgets here', ['Acme Widgets'])
   assert.ok(result !== null)
-  assert.equal(result.masked, 'Use ⟦0⟧ here')
+  assert.equal(result.masked, 'Use [0] here')
 })
 
 test('does not mask prose that only looks like a path or identifier', () => {
@@ -81,9 +81,25 @@ test('does not mask prose that only looks like a path or identifier', () => {
 test('keeps model names, versions and real paths as single slots', () => {
   const result = protectText('tencent/HY-MT1.5-1.8B-GGUF v0.2.1-rc.2 1.8B /etc/hosts', [])
   assert.deepEqual(result.slots, ['HY-MT1.5-1.8B-GGUF', 'v0.2.1-rc.2', '1.8B', '/etc/hosts'])
-  assert.equal(result.masked.replace(/⟦\d+⟧/g, 'X'), 'tencent/X X X X')
+  assert.equal(result.masked.replace(/\[\d+\]/g, 'X'), 'tencent/X X X X')
 })
 
+
+test('protects a relative path with a directory as one slot', () => {
+  const result = protectText('Fix client/index.js and src/app.test.mjs now', [])
+  assert.deepEqual(result.slots, ['client/index.js', 'src/app.test.mjs'])
+  assert.equal(restoreText(result.masked, result.slots), 'Fix client/index.js and src/app.test.mjs now')
+})
+
+test('supports a custom mask format', () => {
+  const source = 'Run `npm test` now'
+  const legacy = protectText(source, [], '⟦n⟧')
+  assert.match(legacy.masked, /⟦0⟧/)
+  assert.equal(restoreText(legacy.masked, legacy.slots, '⟦n⟧'), source)
+  const braces = protectText('Open `x` now', [], '{{n}}')
+  assert.match(braces.masked, /\{\{0\}\}/)
+  assert.equal(restoreText(braces.masked, braces.slots, '{{n}}'), 'Open `x` now')
+})
 
 test('recognises Chinese blocks without swallowing Japanese or Korean', () => {
   assert.equal(isChineseText('这是中文段落'), true)

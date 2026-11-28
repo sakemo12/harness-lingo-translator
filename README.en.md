@@ -11,9 +11,10 @@
 
 - **Frontend display, no context pollution**: changes only the render layer; no session log, no workspace write. Translations are written into memory and synced to the local cache, and the original returns when translation is switched off.
 - **Two backends**: a custom OpenAI-compatible service for a small translation model deployed locally; alternatively, the model interface used by the newest request in the current session (possibly slower and incurring provider costs).
-- **Content fidelity**: code, paths, URLs, identifiers and other protected spans are masked as `⟦n⟧`; when translation finishes, the translated text is written back into the original text nodes, keeping the rendering faithful.
+- **Content fidelity**: code, paths, URLs, identifiers and other protected spans are masked as `[n]` by default (the format is configurable); when translation finishes, the translated text is written back into the original text nodes, keeping the rendering faithful. Keyword masking can be turned off, in which case the plain source text is sent.
+- **Chat-flow scope**: only text inside the conversation flow column (`div.EvIC1a_column[data-chat-flow]`) is translated; the sidebar, settings page, file viewer, composer and the plugin's own button stay untouched.
 - **Hover comparison**: a stationary hover shows the original and moving away restores the translation; the block height is pinned to the larger of the original/translated heights, so the layout does not jump.
-- **More settings**: connection mode, custom prompt header, hover delay, concurrency, multi-paragraph reasoning batching, cache cleanup and more.
+- **More settings**: connection mode, custom prompt header, custom mask format, keyword retention, hover delay, concurrency, multi-paragraph reasoning batching, cache cleanup and more.
 - **Controllable translation**: the switch stays clickable while translating; clicking it turns translation off and restores the originals. Errors are shown above the button and follow the UI language.
 - **Passive translation**: on first enable, text already on screen stays original (even if cached); only content that appears, changes or is newly revealed afterwards is translated. Newly generated content follows automatically, and a newly appeared/revealed collapsed reasoning block translates just its first paragraph as a preview.
 
@@ -103,7 +104,7 @@ Index format, every marketplace channel and the submission artifacts live in [ma
 **Plugins → Installed plugins → Harness Lingo Translator → Configure** has four tabs:
 
 - **Connection**: Custom service / System model, service address, model name, API token.
-- **Translation**: concurrency, batch reasoning, prompt header, keyword retention.
+- **Translation**: concurrency, batch reasoning, prompt header, keyword retention and a custom mask format.
 - **Hover**: show original on hover, hover delay.
 - **Translation cache**: default directory, copy path, prune deleted conversations.
 
@@ -111,18 +112,18 @@ Saving applies immediately; the API token is write-only and never echoed back. F
 
 ## How it works
 
-The browser walks the rendered DOM, masks code, paths, commands, URLs, identifiers, versions, hashes, numbers and product names as `⟦n⟧`, and sends only the prose to the host. The host calls the local service or the system model; the browser verifies placeholders and writes the translation back into the same text nodes. Translations live only in the DOM, `localStorage` and the host-private cache directory; the session log, workspace files and DSH config are never written.
+The browser walks only the DOM inside the conversation flow column (`div.EvIC1a_column[data-chat-flow]`), masks code, paths, commands, URLs, identifiers, versions, hashes, numbers and product names as `[n]` by default (or a custom format, or plain text when keyword masking is off), and sends only the prose to the host. The host calls the local service or the system model; the browser verifies placeholders and writes the translation back into the same text nodes. Translations live only in the DOM, `localStorage` and the host-private cache directory; the session log, workspace files and DSH config are never written.
 
 ## Known limits
 
 - Images, Canvas and PDF previews are not OCR'd.
-- The 1.8B model is not 100% stable with `⟦n⟧`; a failed segment retries at most 3 times and then keeps its original text. For more stability, use a larger translation model, adjust the prompts, or connect another OpenAI-compatible service.
+- The 1.8B model is not 100% stable with placeholders; the default `[n]` is the easiest format, while custom formats may require a smarter model; a failed segment retries at most 3 times and then keeps its original text. For more stability, use a larger translation model, adjust the prompts, or connect another OpenAI-compatible service.
 
 ## Development
 
 ```sh
 pnpm install
-pnpm test        # 167 cases
+pnpm test        # 180 cases
 pnpm run lint
 pnpm run verify:self-contained
 pnpm pack

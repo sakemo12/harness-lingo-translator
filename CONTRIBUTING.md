@@ -16,7 +16,7 @@ at [sakemo12/harness-lingo-translator](https://github.com/sakemo12/harness-lingo
   config write outside the user's explicit Save on the Plugins page. The only
   host file write is the per-workspace cache under
   `~/.dsh/cache/harness-lingo-translator/`; the workspace itself is never written.
-- Keep placeholder verification fail-closed: a translation that loses, renumbers or invents a `⟦n⟧` token must keep the original text.
+- Keep placeholder verification fail-closed: a translation that loses, renumbers or invents a placeholder token must keep the original text.
 - Add or update a test under `test/`; `pnpm test` must pass on Node 22 and 24.
 - Run `pnpm run lint` and `pnpm run verify:self-contained` before opening the PR.
 - Do not add a build step to the client bundle without updating `client/index.js`'s loader shape and the descriptor parity test.

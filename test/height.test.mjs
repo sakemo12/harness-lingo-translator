@@ -45,7 +45,11 @@ function installLayout(dom) {
 }
 
 function withDom(html) {
-  const dom = new JSDOM('<!doctype html><html><body>' + html + '</body></html>', { url: 'https://example.test/' })
+  // The engine is scoped to the conversation flow column.
+  const dom = new JSDOM(
+    '<!doctype html><html><body><div class="EvIC1a_column" data-chat-flow>' + html + '</div></body></html>',
+    { url: 'https://example.test/' },
+  )
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   globalThis.NodeFilter = dom.window.NodeFilter

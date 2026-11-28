@@ -41,19 +41,43 @@ test('auto chooses the Chinese template only for Chinese targets', () => {
 test('prompts reproduce the model card templates, with a guard only for masked segments', () => {
   assert.equal(
     buildPrompt({ targetLang: 'zh', style: 'auto', text: 'Hello' }),
-    '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释：\n\nHello',
+    '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释：Hello',
   )
   assert.equal(
-    buildPrompt({ targetLang: 'zh', style: 'auto', text: 'Hello ⟦0⟧' }),
-    '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释，原文中的⟦0⟧、⟦1⟧、⟦2⟧这类占位符必须原样保留，你可以把占位符当做未知内容（一般是专有名词、数值、代码块）插入翻译好的句子，但不要把括号里的编号当做数字翻译进内容里：\n\nHello ⟦0⟧',
+    buildPrompt({ targetLang: 'zh', style: 'auto', text: 'Hello [0]' }),
+    '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释，原文中的[0]、[1]、[2]这类占位符必须原样保留，你可以把占位符当做未知内容（一般是专有名词、数值、代码块）插入翻译好的句子，但不要把占位符里的编号当做数字翻译进内容里：Hello [0]',
   )
   assert.equal(
     buildPrompt({ targetLang: 'ja', style: 'auto', text: 'Hello' }),
-    'Translate the following segment into Japanese, without additional explanation.\n\nHello',
+    'Translate the following segment into Japanese, without additional explanation. Hello',
   )
   assert.equal(
-    buildPrompt({ targetLang: 'ja', style: 'auto', text: 'Open ⟦0⟧ now' }),
-    'Translate the following segment into Japanese, without additional explanation. Keep placeholders such as ⟦0⟧, ⟦1⟧ and ⟦2⟧ exactly as they appear. Treat them as unknown content (usually a proper noun, number or code block) to insert into the translated sentence, but never translate the number inside the brackets as content.\n\nOpen ⟦0⟧ now',
+    buildPrompt({ targetLang: 'ja', style: 'auto', text: 'Open [0] now' }),
+    'Translate the following segment into Japanese, without additional explanation. Keep placeholders such as [0], [1] and [2] exactly as they appear. Treat them as unknown content (usually a proper noun, number or code block) to insert into the translated sentence, but never translate the number inside the placeholder as content. Open [0] now',
+  )
+})
+
+test('a custom mask template drives the guard and the token check', () => {
+  assert.ok(buildPrompt({ targetLang: 'zh', text: 'Hello ⟦0⟧', format: '⟦n⟧' }).includes('⟦0⟧、⟦1⟧、⟦2⟧'))
+  assert.ok(buildPrompt({ targetLang: 'zh', text: 'Hello {{0}}', format: '{{n}}' }).includes('{{0}}、{{1}}、{{2}}'))
+  assert.equal(placeholdersIntact('[0] a', 'x [0]'), true)
+  assert.equal(placeholdersIntact('⟦0⟧ a', 'x ⟦0⟧', '⟦n⟧'), true)
+  assert.equal(placeholdersIntact('⟦0⟧ a', 'x', '⟦n⟧'), false)
+  assert.equal(placeholdersIntact('{{0}}', '{{0}}', '{{n}}'), true)
+})
+
+test('the source text never starts with a blank line or carries escaped quotes', () => {
+  assert.equal(
+    buildPrompt({ targetLang: 'zh', style: 'auto', text: '\n\nHe said \\"hi\\"' }),
+    '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释：He said "hi"',
+  )
+  assert.equal(
+    buildPrompt({ targetLang: 'de', style: 'auto', text: '\\n\\nHe said \\"hi\\"' }),
+    'Translate the following segment into German, without additional explanation. He said "hi"',
+  )
+  assert.equal(
+    buildBatchPrompt({ targetLang: 'zh', segments: ['\n\nOne', '\\"Two\\"'] }),
+    '将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释。每行一段，保持行数、顺序和编号，不要合并或拆分段落：1. One\n2. "Two"',
   )
 })
 
@@ -93,10 +117,10 @@ test('glossary entries split into masked terms and terminology pairs', () => {
 })
 
 test('placeholder multiset must match', () => {
-  assert.equal(placeholdersIntact('⟦0⟧ a ⟦1⟧', 'x ⟦1⟧ y ⟦0⟧'), true)
-  assert.equal(placeholdersIntact('⟦0⟧ a', 'x'), false)
-  assert.equal(placeholdersIntact('⟦0⟧ a ⟦1⟧', '⟦0⟧ a ⟦0⟧'), false)
-  assert.equal(placeholdersIntact('plain', '⟦0⟧ invented'), false)
+  assert.equal(placeholdersIntact('[0] a [1]', 'x [1] y [0]'), true)
+  assert.equal(placeholdersIntact('[0] a', 'x'), false)
+  assert.equal(placeholdersIntact('[0] a [1]', '[0] a [0]'), false)
+  assert.equal(placeholdersIntact('plain', '[0] invented'), false)
 })
 
 test('cleanOutput removes fences, labels, echoes and wrapping quotes', () => {
@@ -114,14 +138,14 @@ test('endpoint URLs keep exactly one slash', () => {
 })
 
 test('translates every segment with one request per segment', async () => {
-  const fetchImpl = fakeFetch((prompt) => completion(prompt.endsWith('⟦0⟧') ? '你好 ⟦0⟧' : '二'))
+  const fetchImpl = fakeFetch((prompt) => completion(prompt.endsWith('[0]') ? '你好 [0]' : '二'))
   const result = await translateSegments({
     config: baseConfig({ concurrency: 2 }),
     targetLang: 'zh',
-    segments: ['Hello ⟦0⟧', 'Two'],
+    segments: ['Hello [0]', 'Two'],
     fetchImpl,
   })
-  assert.deepEqual(result.translations, ['你好 ⟦0⟧', '二'])
+  assert.deepEqual(result.translations, ['你好 [0]', '二'])
   assert.deepEqual(result.failed, [])
   assert.equal(result.error, null)
   assert.equal(result.baseUrl, 'http://127.0.0.1:8080/v1')
@@ -143,11 +167,11 @@ test('fails closed when a placeholder disappears', async () => {
   const result = await translateSegments({
     config: baseConfig(),
     targetLang: 'zh',
-    segments: ['Hello ⟦0⟧'],
+    segments: ['Hello [0]'],
     fetchImpl,
   })
   assert.deepEqual(result.failed, [0])
-  assert.deepEqual(result.translations, ['Hello ⟦0⟧'])
+  assert.deepEqual(result.translations, ['Hello [0]'])
   assert.match(result.error, /placeholder/)
 })
 
@@ -298,16 +322,16 @@ test('numbered answers round-trip, including wrapped lines', () => {
 test('one batched request translates a thinking block', async () => {
   const fetchImpl = fakeFetch((prompt) => {
     assert.match(prompt, /每行一段/)
-    return completion('1. 你好 ⟦0⟧\n2. 二')
+    return completion('1. 你好 [0]\n2. 二')
   })
   const result = await translateSegments({
     config: baseConfig({ batchReasoning: true }),
     targetLang: 'zh',
-    segments: ['Hello ⟦0⟧', 'Two'],
+    segments: ['Hello [0]', 'Two'],
     batch: true,
     fetchImpl,
   })
-  assert.deepEqual(result.translations, ['你好 ⟦0⟧', '二'])
+  assert.deepEqual(result.translations, ['你好 [0]', '二'])
   assert.deepEqual(result.failed, [])
   assert.equal(fetchImpl.calls.length, 1)
 })
@@ -315,16 +339,16 @@ test('one batched request translates a thinking block', async () => {
 test('an unusable numbered answer falls back to per-segment requests', async () => {
   const fetchImpl = fakeFetch((prompt) => {
     if (prompt.includes('每行一段')) return completion('merged without numbers')
-    return prompt.endsWith('Hello ⟦0⟧') ? completion('你好 ⟦0⟧') : completion('二')
+    return prompt.endsWith('Hello [0]') ? completion('你好 [0]') : completion('二')
   })
   const result = await translateSegments({
     config: baseConfig({ batchReasoning: true }),
     targetLang: 'zh',
-    segments: ['Hello ⟦0⟧', 'Two'],
+    segments: ['Hello [0]', 'Two'],
     batch: true,
     fetchImpl,
   })
-  assert.deepEqual(result.translations, ['你好 ⟦0⟧', '二'])
+  assert.deepEqual(result.translations, ['你好 [0]', '二'])
   assert.deepEqual(result.failed, [])
   assert.equal(fetchImpl.calls.length, 3)
 })
@@ -367,7 +391,7 @@ test('segments with newlines are translated individually even when batching', as
 test('the configured prompt header replaces the built-in instruction', () => {
   const header = 'Use a concise, formal tone.'
   const prompt = buildPrompt({ targetLang: 'zh', text: 'Hello', header })
-  assert.ok(prompt.startsWith(header + '\n\nHello'))
+  assert.ok(prompt.startsWith(header + ' Hello'))
   const batch = buildBatchPrompt({ targetLang: 'zh', segments: ['One'], header })
   assert.ok(batch.startsWith('Use a concise, formal tone。每行一段'))
   assert.equal(buildPrompt({ targetLang: 'zh', text: 'Hello', header: '   ' }), buildPrompt({ targetLang: 'zh', text: 'Hello' }))
@@ -381,40 +405,66 @@ test('translateSegments sends the header with the request', async () => {
     segments: ['Hello'],
     fetchImpl,
   })
-  assert.ok(fetchImpl.calls[0].prompt.startsWith('Use a formal tone.\n\n'))
+  assert.ok(fetchImpl.calls[0].prompt.startsWith('Use a formal tone. '))
 })
 
 
 test('the placeholder guard can be disabled or customised', () => {
-  const base = buildPrompt({ targetLang: 'zh', text: 'Hello ⟦0⟧' })
+  const base = buildPrompt({ targetLang: 'zh', text: 'Hello [0]' })
   assert.match(base, /占位符/)
-  const off = buildPrompt({ targetLang: 'zh', text: 'Hello ⟦0⟧', guard: false })
+  const off = buildPrompt({ targetLang: 'zh', text: 'Hello [0]', guard: false })
   assert.doesNotMatch(off, /占位符/)
-  const custom = buildPrompt({ targetLang: 'zh', text: 'Hello ⟦0⟧', guardHint: '编号必须保留。' })
-  assert.ok(custom.includes('，编号必须保留。\n\nHello ⟦0⟧'))
-  const bare = buildPrompt({ targetLang: 'zh', text: 'Hello ⟦0⟧', guardHint: '编号必须保留' })
-  assert.ok(bare.includes('，编号必须保留：\n\nHello ⟦0⟧'))
-  const enOff = buildPrompt({ targetLang: 'de', text: 'Hello ⟦0⟧', guard: false })
+  const custom = buildPrompt({ targetLang: 'zh', text: 'Hello [0]', guardHint: '编号必须保留。' })
+  assert.ok(custom.includes('，编号必须保留。 Hello [0]'))
+  const bare = buildPrompt({ targetLang: 'zh', text: 'Hello [0]', guardHint: '编号必须保留' })
+  assert.ok(bare.includes('，编号必须保留：Hello [0]'))
+  const enOff = buildPrompt({ targetLang: 'de', text: 'Hello [0]', guard: false })
   assert.doesNotMatch(enOff, /placeholder/i)
-  const enCustom = buildPrompt({ targetLang: 'de', text: 'Hello ⟦0⟧', guardHint: 'Keep ⟦0⟧.' })
-  assert.ok(enCustom.includes('explanation. Keep ⟦0⟧.\n\nHello ⟦0⟧'))
+  const enCustom = buildPrompt({ targetLang: 'de', text: 'Hello [0]', guardHint: 'Keep [0].' })
+  assert.ok(enCustom.includes('explanation. Keep [0]. Hello [0]'))
+})
+
+test('disabling the guard also disables placeholder verification', async () => {
+  const fetchImpl = fakeFetch(() => completion('你好'))
+  const result = await translateSegments({
+    config: baseConfig({ placeholderGuard: false }),
+    targetLang: 'zh',
+    segments: ['Hello [0]'],
+    fetchImpl,
+  })
+  assert.deepEqual(result.translations, ['你好'])
+  assert.deepEqual(result.failed, [])
+  assert.equal(result.error, null)
+})
+
+test('disabling the guard also disables batched placeholder verification', async () => {
+  const fetchImpl = fakeFetch(() => completion('1. 你好\n2. 世界'))
+  const result = await translateSegments({
+    config: baseConfig({ placeholderGuard: false, batchReasoning: true }),
+    targetLang: 'zh',
+    segments: ['Hello [0]', 'World [1]'],
+    batch: true,
+    fetchImpl,
+  })
+  assert.deepEqual(result.translations, ['你好', '世界'])
+  assert.deepEqual(result.failed, [])
 })
 
 test('batch prompts honour the guard options', () => {
   assert.doesNotMatch(buildBatchPrompt({ targetLang: 'zh', segments: ['One'] }), /占位符/)
-  assert.match(buildBatchPrompt({ targetLang: 'zh', segments: ['One ⟦0⟧'] }), /这类占位符必须原样保留/)
-  assert.doesNotMatch(buildBatchPrompt({ targetLang: 'zh', segments: ['One ⟦0⟧'], guard: false }), /占位符/)
-  const custom = buildBatchPrompt({ targetLang: 'zh', segments: ['One ⟦0⟧'], guardHint: '编号必须保留。' })
-  assert.ok(custom.includes('不要合并或拆分段落，编号必须保留。\n\n1. One ⟦0⟧'))
+  assert.match(buildBatchPrompt({ targetLang: 'zh', segments: ['One [0]'] }), /这类占位符必须原样保留/)
+  assert.doesNotMatch(buildBatchPrompt({ targetLang: 'zh', segments: ['One [0]'], guard: false }), /占位符/)
+  const custom = buildBatchPrompt({ targetLang: 'zh', segments: ['One [0]'], guardHint: '编号必须保留。' })
+  assert.ok(custom.includes('不要合并或拆分段落，编号必须保留。 1. One [0]'))
 })
 
 test('translateSegments sends the configured guard sentence', async () => {
-  const fetchImpl = fakeFetch(() => completion('一 ⟦0⟧'))
+  const fetchImpl = fakeFetch(() => completion('一 [0]'))
   await translateSegments({
     config: baseConfig({ placeholderHint: '编号必须保留。' }),
     targetLang: 'zh',
-    segments: ['One ⟦0⟧'],
+    segments: ['One [0]'],
     fetchImpl,
   })
-  assert.ok(fetchImpl.calls[0].prompt.includes('，编号必须保留。\n\nOne ⟦0⟧'))
+  assert.ok(fetchImpl.calls[0].prompt.includes('，编号必须保留。 One [0]'))
 })

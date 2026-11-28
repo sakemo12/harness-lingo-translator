@@ -19,7 +19,7 @@ function fakeFetch() {
     if (init.method === 'GET') return jsonResponse({ data: [{ id: 'hy-mt1.5-1.8b' }] })
     const body = JSON.parse(init.body)
     const prompt = body.messages[0].content
-    return prompt.endsWith('⟦0⟧') ? completion('你好 ⟦0⟧') : completion('你好')
+    return prompt.endsWith('[0]') ? completion('你好 [0]') : completion('你好')
   }
   impl.calls = calls
   return impl
@@ -41,6 +41,8 @@ test('status() reports the local endpoint and the merged glossary', async () => 
   assert.equal(status.targetLang, 'zh')
   assert.deepEqual(status.glossary, ['Acme'])
   assert.equal(status.batchReasoning, false)
+  assert.equal(status.placeholderGuard, true)
+  assert.equal(status.placeholderFormat, '[n]')
   assert.equal(status.hoverRestore, true)
   assert.equal(status.hoverRestoreMs, 200)
   assert.match(status.configHash, /^[0-9a-f]{16}$/)
@@ -60,8 +62,8 @@ test('status() explains an unreachable endpoint', async () => {
 
 test('translate() returns one translation per segment', async () => {
   const { instance, fetchImpl } = service()
-  const result = await instance.translate({ targetLang: 'zh', segments: ['Hello ⟦0⟧', 'Hello'] })
-  assert.deepEqual(result.translations, ['你好 ⟦0⟧', '你好'])
+  const result = await instance.translate({ targetLang: 'zh', segments: ['Hello [0]', 'Hello'] })
+  assert.deepEqual(result.translations, ['你好 [0]', '你好'])
   assert.deepEqual(result.failed, [])
   assert.equal(result.error, null)
   assert.equal(result.baseUrl, 'http://127.0.0.1:8080/v1')
